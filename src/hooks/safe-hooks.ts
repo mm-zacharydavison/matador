@@ -1,29 +1,17 @@
 import type { ConnectionState } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
-import type {
-  DecodeErrorContext,
-  EnqueueErrorContext,
-  EnqueueSuccessContext,
-  EnqueueWarningContext,
-  MatadorHooks,
-  WorkerErrorContext,
-  WorkerExecuteFn,
-  WorkerSuccessContext,
+import {
+  consoleLogger,
+  type DecodeErrorContext,
+  type EnqueueErrorContext,
+  type EnqueueSuccessContext,
+  type EnqueueWarningContext,
+  type Logger,
+  type MatadorHooks,
+  type WorkerErrorContext,
+  type WorkerExecuteFn,
+  type WorkerSuccessContext,
 } from './types.js';
-
-/**
- * Logger interface for hook errors.
- */
-export interface HookLogger {
-  warn(message: string, error?: unknown): void;
-}
-
-/**
- * Default no-op logger.
- */
-const noopLogger: HookLogger = {
-  warn: () => {},
-};
 
 /**
  * Wraps hooks with error handling to prevent hook errors from breaking processing.
@@ -31,11 +19,13 @@ const noopLogger: HookLogger = {
  */
 export class SafeHooks {
   private readonly hooks: MatadorHooks;
-  private readonly logger: HookLogger;
 
-  constructor(hooks: MatadorHooks = {}, logger: HookLogger = noopLogger) {
+  /** The logger instance used by Matador. */
+  readonly logger: Logger;
+
+  constructor(hooks: MatadorHooks = {}) {
     this.hooks = hooks;
-    this.logger = logger;
+    this.logger = hooks.logger ?? consoleLogger;
   }
 
   async onEnqueueSuccess(context: EnqueueSuccessContext): Promise<void> {
@@ -188,9 +178,6 @@ export class SafeHooks {
 /**
  * Creates a SafeHooks wrapper.
  */
-export function createSafeHooks(
-  hooks?: MatadorHooks,
-  logger?: HookLogger,
-): SafeHooks {
-  return new SafeHooks(hooks, logger);
+export function createSafeHooks(hooks?: MatadorHooks): SafeHooks {
+  return new SafeHooks(hooks);
 }

@@ -55,11 +55,8 @@ export interface RabbitMQSubscribeOptions {
   /** Consumer tag */
   readonly consumerTag?: string | undefined;
 
-  /** Prefetch count */
+  /** Prefetch count (overrides concurrency option) */
   readonly prefetch?: number | undefined;
-
-  /** No-ack mode (auto-acknowledge) */
-  readonly noAck?: boolean | undefined;
 
   /** Exclusive consumer */
   readonly exclusive?: boolean | undefined;

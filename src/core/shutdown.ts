@@ -1,3 +1,5 @@
+import { consoleLogger, type Logger } from '../hooks/index.js';
+
 /**
  * Shutdown state.
  */
@@ -18,6 +20,9 @@ export interface ShutdownConfig {
 
   /** Polling interval when waiting for handlers to idle */
   readonly idlePollingInterval: number;
+
+  /** Logger for shutdown events (defaults to console) */
+  readonly logger: Logger;
 }
 
 /**
@@ -26,6 +31,7 @@ export interface ShutdownConfig {
 export const defaultShutdownConfig: ShutdownConfig = {
   gracefulShutdownTimeout: 30000,
   idlePollingInterval: 1000,
+  logger: consoleLogger,
 };
 
 /**
@@ -143,7 +149,7 @@ export class ShutdownManager {
 
     while (!this.getHandlersState().isIdle) {
       if (Date.now() > deadline) {
-        console.warn(
+        this.config.logger.warn(
           `Shutdown timeout reached with ${this.eventsBeingProcessed} events still processing`,
         );
         break;

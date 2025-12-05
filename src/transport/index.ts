@@ -31,3 +31,9 @@ export {
 } from './connection-manager.js';
 
 export { MemoryTransport } from './memory/memory-transport.js';
+
+export type { RabbitMQTransportConfig } from './rabbitmq/rabbitmq-transport.js';
+export {
+  RabbitMQTransport,
+  createRabbitMQTransport,
+} from './rabbitmq/rabbitmq-transport.js';

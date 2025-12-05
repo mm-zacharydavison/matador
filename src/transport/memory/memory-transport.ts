@@ -9,6 +9,7 @@ import type {
   Subscription,
   Transport,
 } from '../transport.js';
+import { consoleLogger, type Logger } from '../../hooks/index.js';
 
 /**
  * Capabilities of the MemoryTransport.
@@ -55,6 +56,11 @@ export class MemoryTransport implements Transport {
   private readonly completedMessages: MessageReceipt[] = [];
   private readonly delayedTimers = new Set<ReturnType<typeof setTimeout>>();
   private messageIdCounter = 0;
+  private readonly logger: Logger;
+
+  constructor(logger?: Logger) {
+    this.logger = logger ?? consoleLogger;
+  }
 
   async connect(): Promise<void> {
     this.connected = true;
@@ -82,6 +88,10 @@ export class MemoryTransport implements Transport {
   }
 
   async applyTopology(topology: Topology): Promise<void> {
+    if (!this.connected) {
+      throw new Error('Transport not connected');
+    }
+
     // Initialize queues for the topology
     for (const queueDef of topology.queues) {
       const queueName = `${topology.namespace}.${queueDef.name}`;
@@ -160,7 +170,7 @@ export class MemoryTransport implements Transport {
         await sub.handler(message.envelope, receipt);
       } catch (error) {
         // Handler errors should be caught in the pipeline
-        console.error('Memory transport: handler error', error);
+        this.logger.error('Handler error in message processing', error);
       }
     }
   }

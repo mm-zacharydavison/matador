@@ -62,6 +62,7 @@ export type {
   MessageReceipt,
   RabbitMQSendOptions,
   RabbitMQSubscribeOptions,
+  RabbitMQTransportConfig,
   SendOptions,
   StateChangeCallback,
   SubscribeOptions,
@@ -73,9 +74,11 @@ export type {
 } from './transport/index.js';
 export {
   ConnectionManager,
+  createRabbitMQTransport,
   defaultConnectionConfig,
   hasNativeDeadLetter,
   MemoryTransport,
+  RabbitMQTransport,
   supportsDeliveryMode,
   supportsDelayedMessages,
 } from './transport/index.js';
@@ -135,13 +138,13 @@ export type {
   EnqueueErrorContext,
   EnqueueSuccessContext,
   EnqueueWarningContext,
-  HookLogger,
+  Logger,
   MatadorHooks,
   WorkerErrorContext,
   WorkerExecuteFn,
   WorkerSuccessContext,
 } from './hooks/index.js';
-export { createSafeHooks, SafeHooks } from './hooks/index.js';
+export { consoleLogger, createSafeHooks, SafeHooks } from './hooks/index.js';
 
 // Pipeline
 export type { PipelineConfig, ProcessResult } from './pipeline/index.js';

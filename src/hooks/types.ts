@@ -3,6 +3,26 @@ import type { ConnectionState } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
 
 /**
+ * Logger interface for Matador internal logging.
+ */
+export interface Logger {
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
+}
+
+/**
+ * Default logger that uses console.
+ */
+export const consoleLogger: Logger = {
+  debug: (message, ...args) => console.debug(`[matador] ${message}`, ...args),
+  info: (message, ...args) => console.info(`[matador] ${message}`, ...args),
+  warn: (message, ...args) => console.warn(`[matador] ${message}`, ...args),
+  error: (message, ...args) => console.error(`[matador] ${message}`, ...args),
+};
+
+/**
  * Context for enqueue success hook.
  */
 export interface EnqueueSuccessContext {
@@ -67,6 +87,12 @@ export type WorkerExecuteFn = () => Promise<void>;
  * All available hooks for Matador.
  */
 export interface MatadorHooks {
+  /**
+   * Logger for internal Matador logging.
+   * Defaults to console logger if not provided.
+   */
+  logger?: Logger;
+
   /**
    * Called when an event is successfully enqueued.
    */
