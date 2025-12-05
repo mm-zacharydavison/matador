@@ -57,7 +57,7 @@ export class OrderPlacedEvent extends MatadorEvent {
 // ============================================================================
 
 const sendWelcomeEmail = createSubscriber('send-welcome-email',
-  async (data, docket) => {
+  async ({ data, docket }) => {
     console.log(`  📧 Sending welcome email to ${data.email}`);
     console.log(`     User: ${data.name} (${data.userId})`);
     if (docket.correlationId) {
@@ -68,14 +68,14 @@ const sendWelcomeEmail = createSubscriber('send-welcome-email',
 );
 
 const trackUserAnalytics = createSubscriber('track-user-analytics',
-  async (data) => {
+  async ({ data }) => {
     console.log(`  📊 Tracking analytics for new user: ${data.userId}`);
   },
   { idempotent: 'yes', importance: 'can-ignore' },
 );
 
 const processOrder = createSubscriber('process-order',
-  async (data) => {
+  async ({ data }) => {
     console.log(`  📦 Processing order ${data.orderId}`);
     console.log(`     Amount: $${data.amount.toFixed(2)}`);
     console.log(`     Items: ${data.items.length} item(s)`);
@@ -84,7 +84,7 @@ const processOrder = createSubscriber('process-order',
 );
 
 const sendOrderConfirmation = createSubscriber('send-order-confirmation',
-  async (data) => {
+  async ({ data }) => {
     console.log(`  📧 Sending order confirmation for ${data.orderId}`);
   },
   { idempotent: 'yes', importance: 'should-investigate' },

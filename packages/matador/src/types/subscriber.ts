@@ -1,13 +1,13 @@
 import type { Idempotency, Importance } from './common.js';
-import type { Docket } from './envelope.js';
+import type { Envelope } from './envelope.js';
 import type { MatadorEvent } from './event.js';
 
 /**
  * Callback function executed when an event is received.
+ * Receives the full envelope containing id, data, and docket.
  */
 export type SubscriberCallback<T = unknown> = (
-  data: T,
-  docket: Docket,
+  envelope: Envelope<T>,
 ) => Promise<void> | void;
 
 /**

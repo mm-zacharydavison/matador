@@ -153,10 +153,7 @@ export class ProcessingPipeline {
       await this.hooks.onWorkerBeforeProcess(envelope, subscriberDef);
 
       try {
-        result = await subscriber.callback(
-          envelope.data,
-          envelope.docket,
-        );
+        result = await subscriber.callback(envelope);
       } catch (e) {
         error = e instanceof Error ? e : new Error(String(e));
       }

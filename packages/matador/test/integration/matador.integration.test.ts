@@ -72,7 +72,7 @@ describe('Matador Integration Tests', () => {
         .build();
 
       const subscriber = createSubscriber('process-user',
-        async (data) => {
+        async ({ data }) => {
           processedUsers.push(data.userId);
         },
       );
@@ -111,19 +111,19 @@ describe('Matador Integration Tests', () => {
         .build();
 
       const notifySub = createSubscriber('send-notification',
-        async (data) => {
+        async ({ data }) => {
           notifications.push(data.userId);
         },
       );
 
       const analyticsSub = createSubscriber('track-analytics',
-        async (data) => {
+        async ({ data }) => {
           analytics.push(data.userId);
         },
       );
 
       const emailSub = createSubscriber('send-welcome-email',
-        async (data) => {
+        async ({ data }) => {
           emails.push(data.email);
         },
       );
@@ -160,13 +160,13 @@ describe('Matador Integration Tests', () => {
         .build();
 
       const userSub = createSubscriber('process-user',
-        async (data) => {
+        async ({ data }) => {
           users.push(data.userId);
         },
       );
 
       const orderSub = createSubscriber('process-order',
-        async (data) => {
+        async ({ data }) => {
           orders.push(data.orderId);
         },
       );
@@ -288,7 +288,7 @@ describe('Matador Integration Tests', () => {
         .build();
 
       const subscriber = createSubscriber('track-correlation',
-        async (_data, docket) => {
+        async ({ docket }) => {
           if (docket.correlationId) {
             correlationIds.push(docket.correlationId);
           }
@@ -324,7 +324,7 @@ describe('Matador Integration Tests', () => {
         .build();
 
       const subscriber = createSubscriber('capture-metadata',
-        async (_data, docket) => {
+        async ({ docket }) => {
           if (docket.metadata) {
             receivedMetadata.push(docket.metadata);
           }
@@ -374,7 +374,7 @@ describe('Matador Integration Tests', () => {
         .build();
 
       const subscriber = createSubscriber('slow-subscriber',
-        async (data) => {
+        async ({ data }) => {
           processingStarted = true;
           // Simulate slow processing
           await new Promise((resolve) => setTimeout(resolve, 500));
@@ -454,14 +454,14 @@ describe('Matador Integration Tests', () => {
         .build();
 
       const enabledSub = createSubscriber('enabled-subscriber',
-        async (data) => {
+        async ({ data }) => {
           processed.push(`enabled:${data.userId}`);
         },
         { enabled: () => true },
       );
 
       const disabledSub = createSubscriber('disabled-subscriber',
-        async (data) => {
+        async ({ data }) => {
           processed.push(`disabled:${data.userId}`);
         },
         { enabled: () => false },
