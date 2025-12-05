@@ -91,6 +91,12 @@ export class FanoutEngine {
     // Load universal metadata
     const universalMetadata = await this.hooks.loadUniversalMetadata();
 
+    // Merge event.metadata with options.metadata (options takes precedence)
+    const mergedMetadata =
+      event.metadata || options.metadata
+        ? { ...event.metadata, ...options.metadata }
+        : undefined;
+
     for (const subscriber of subscribers) {
       // Check if subscriber is enabled
       const enabled = await this.isSubscriberEnabled(subscriber);
@@ -108,10 +114,9 @@ export class FanoutEngine {
         eventKey,
         targetSubscriber: subscriber.name,
         data: event.data,
-        before: event.before,
         importance: subscriber.importance ?? 'should-investigate',
         correlationId: options.correlationId,
-        metadata: options.metadata,
+        metadata: mergedMetadata,
         universalMetadata,
         delayMs: options.delayMs,
       });

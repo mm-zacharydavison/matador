@@ -2,6 +2,7 @@ import type { HasDescription } from '../errors/index.js';
 import type {
   AnySubscriber,
   EventClass,
+  MatadorEvent,
   Subscriber,
   SubscriberDefinition,
 } from '../types/index.js';
@@ -41,7 +42,7 @@ export class SchemaRegistry {
    */
   register<T>(
     eventClass: EventClass<T>,
-    subscribers: readonly AnySubscriber<T>[],
+    subscribers: readonly AnySubscriber[],
     options: RegisterOptions = {},
   ): void {
     const key = eventClass.key;
@@ -136,7 +137,7 @@ export class SchemaRegistry {
   getExecutableSubscriber(
     eventKey: string,
     subscriberName: string,
-  ): Subscriber | undefined {
+  ): Subscriber<MatadorEvent<unknown>> | undefined {
     const subscriber = this.getSubscriber(eventKey, subscriberName);
     if (!subscriber || !isSubscriber(subscriber)) return undefined;
     return subscriber;

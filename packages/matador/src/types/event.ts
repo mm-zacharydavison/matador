@@ -1,4 +1,27 @@
 /**
+ * Unique event routing key type alias.
+ */
+export type EventKey = string;
+
+/**
+ * JSON-serializable primitive types.
+ */
+export type JsonPrimitive = string | number | boolean | null;
+
+/**
+ * JSON-serializable value (recursive type for objects and arrays).
+ */
+export type JsonValue =
+  | JsonPrimitive
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+/**
+ * JSON-serializable record type for metadata.
+ */
+export type JsonRecord = Record<string, JsonValue>;
+
+/**
  * Static properties required on Event classes for schema registration.
  */
 export interface EventStatic<T = unknown> {
@@ -6,13 +29,13 @@ export interface EventStatic<T = unknown> {
   readonly key: string;
 
   /** Human-readable description of the event */
-  readonly description: string;
+  readonly description?: string;
 
   /** Alternative names/keys for backwards compatibility */
   readonly aliases?: readonly string[];
 
   /** Create an instance from data (for deserialization) */
-  new (data: T, before?: T | undefined): Event<T>;
+  new (data: T): Event<T>;
 }
 
 /**
@@ -23,8 +46,8 @@ export interface Event<T = unknown> {
   /** The event data/payload */
   readonly data: T;
 
-  /** Previous state for change-type events */
-  readonly before?: T | undefined;
+  /** Event-specific metadata (merged with EventOptions metadata on dispatch) */
+  readonly metadata?: JsonRecord | undefined;
 }
 
 /**
@@ -39,38 +62,44 @@ export interface EventOptions {
 
   /**
    * Event-specific metadata to include in the docket.
-   * This metadata will be merged with universal metadata from the
-   * loadUniversalMetadata hook, with these values taking precedence
-   * when keys conflict.
+   * This metadata will be merged with:
+   * 1. Event instance metadata (if defined on the event)
+   * 2. Universal metadata from the loadUniversalMetadata hook
+   * With EventOptions metadata taking precedence over event metadata,
+   * and both taking precedence over universal metadata.
    */
-  readonly metadata?: Record<string, unknown> | undefined;
+  readonly metadata?: JsonRecord | undefined;
 }
 
 /**
- * Abstract base class for creating event types.
+ * Abstract base class for creating Matador events.
  * Extend this class to define custom events.
  *
  * @example
  * ```typescript
- * class UserCreatedEvent extends BaseEvent<{ userId: string; email: string }> {
- *   static readonly key = 'user.created';
- *   static readonly description = 'Fired when a new user is created';
+ * class UserCreatedEvent extends MatadorEvent {
+ *   static readonly key = 'user.created'
+ *   static readonly description = 'Fired when a new user is created'
+ *
+ *   constructor(
+ *     public data: { userId: string; email: string },
+ *     public metadata?: JsonRecord,
+ *   ) {
+ *     super()
+ *   }
  * }
  * ```
  */
-export abstract class BaseEvent<T> implements Event<T> {
+export abstract class MatadorEvent<T = unknown> implements Event<T> {
   static readonly key: string;
-  static readonly description: string;
+  static readonly description?: string;
   static readonly aliases?: readonly string[];
 
-  readonly before?: T | undefined;
+  /** The event data/payload - must be defined by subclass */
+  abstract readonly data: T;
 
-  constructor(
-    public readonly data: T,
-    before?: T | undefined,
-  ) {
-    this.before = before;
-  }
+  /** Event-specific metadata */
+  readonly metadata?: JsonRecord | undefined;
 }
 
 /**
@@ -83,8 +112,4 @@ export type EventData<E extends Event<unknown>> = E extends Event<infer T>
 /**
  * Type helper to get the event class type.
  */
-export type EventClass<T = unknown> = EventStatic<T> &
-  (new (
-    data: T,
-    before?: T | undefined,
-  ) => Event<T>);
+export type EventClass<T = unknown> = EventStatic<T> & (new (data: T) => Event<T>);

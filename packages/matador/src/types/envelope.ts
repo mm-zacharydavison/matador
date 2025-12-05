@@ -28,14 +28,11 @@ export interface Envelope<T = unknown> {
 }
 
 /**
- * Envelope payload structure supporting before/after state for change events.
+ * Envelope payload structure containing the event data.
  */
 export interface EnvelopePayload<T = unknown> {
-  /** Current/after state of the event data */
+  /** The event data */
   readonly data: T;
-
-  /** Previous state for change-type events (same type as data) */
-  readonly before?: T | undefined;
 }
 
 /**
@@ -83,7 +80,7 @@ type DocketCreateFields = Pick<
 /**
  * Fields from EnvelopePayload that can be specified when creating an envelope.
  */
-type PayloadCreateFields<T> = Pick<EnvelopePayload<T>, 'data' | 'before'>;
+type PayloadCreateFields<T> = Pick<EnvelopePayload<T>, 'data'>;
 
 /**
  * Options for creating an envelope.
@@ -130,7 +127,6 @@ export function createEnvelope<T>(
     id: options.id ?? crypto.randomUUID(),
     payload: {
       data: options.data,
-      ...(options.before !== undefined && { before: options.before }),
     },
     docket: {
       eventKey: options.eventKey,

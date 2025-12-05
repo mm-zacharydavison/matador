@@ -1,6 +1,6 @@
 import type { Idempotency, Importance } from './common.js';
 import type { Docket } from './envelope.js';
-import type { EventClass } from './event.js';
+import type { MatadorEvent } from './event.js';
 
 /**
  * Callback function executed when an event is received.
@@ -30,15 +30,12 @@ export interface SubscriberOptions {
 /**
  * Full subscriber definition with callback.
  */
-export interface Subscriber<T = unknown> extends SubscriberOptions {
+export interface Subscriber<T extends MatadorEvent> extends SubscriberOptions {
   /** Human-readable name for the subscriber */
   readonly name: string;
 
-  /** The event class this subscriber handles */
-  readonly eventClass: EventClass<T>;
-
   /** Callback function to execute when event is received */
-  readonly callback: SubscriberCallback<T>;
+  readonly callback: SubscriberCallback<T['data']>;
 }
 
 /**
@@ -46,12 +43,9 @@ export interface Subscriber<T = unknown> extends SubscriberOptions {
  * is in a remote service. Declares the subscriber contract without providing
  * the callback.
  */
-export interface SubscriberStub<T = unknown> extends SubscriberOptions {
+export interface SubscriberStub extends SubscriberOptions {
   /** Human-readable name for the subscriber */
   readonly name: string;
-
-  /** The event class this subscriber handles */
-  readonly eventClass: EventClass<T>;
 
   /** Indicates this is a stub without implementation */
   readonly isStub: true;
@@ -59,39 +53,38 @@ export interface SubscriberStub<T = unknown> extends SubscriberOptions {
 
 /**
  * Union type for any subscriber definition (full or stub).
+ * This is the type-erased version for use in collections and schema.
  */
-export type AnySubscriber<T = unknown> = Subscriber<T> | SubscriberStub<T>;
+export type AnySubscriber = Subscriber<MatadorEvent<unknown>> | SubscriberStub;
 
 /**
  * Type guard to check if a subscriber is a stub.
  */
-export function isSubscriberStub<T>(
-  subscriber: AnySubscriber<T>,
-): subscriber is SubscriberStub<T> {
+export function isSubscriberStub(
+  subscriber: AnySubscriber,
+): subscriber is SubscriberStub {
   return 'isStub' in subscriber && subscriber.isStub === true;
 }
 
 /**
  * Type guard to check if a subscriber has a callback implementation.
  */
-export function isSubscriber<T>(
-  subscriber: AnySubscriber<T>,
-): subscriber is Subscriber<T> {
+export function isSubscriber(
+  subscriber: AnySubscriber,
+): subscriber is Subscriber<MatadorEvent<unknown>> {
   return 'callback' in subscriber && typeof subscriber.callback === 'function';
 }
 
 /**
  * Creates a subscriber definition.
  */
-export function createSubscriber<T>(
+export function createSubscriber<T extends MatadorEvent>(
   name: string,
-  eventClass: EventClass<T>,
-  callback: SubscriberCallback<T>,
+  callback: SubscriberCallback<T['data']>,
   options: SubscriberOptions = {},
 ): Subscriber<T> {
   return {
     name,
-    eventClass,
     callback,
     idempotent: options.idempotent ?? 'unknown',
     importance: options.importance ?? 'should-investigate',
@@ -105,14 +98,12 @@ export function createSubscriber<T>(
 /**
  * Creates a subscriber stub for remote implementations.
  */
-export function createSubscriberStub<T>(
+export function createSubscriberStub(
   name: string,
-  eventClass: EventClass<T>,
   options: SubscriberOptions = {},
-): SubscriberStub<T> {
+): SubscriberStub {
   return {
     name,
-    eventClass,
     isStub: true,
     idempotent: options.idempotent ?? 'unknown',
     importance: options.importance ?? 'should-investigate',

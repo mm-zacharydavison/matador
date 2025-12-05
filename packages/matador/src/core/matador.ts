@@ -120,7 +120,7 @@ export class Matador {
    */
   register<T>(
     eventClass: EventClass<T>,
-    subscribers: readonly AnySubscriber<T>[],
+    subscribers: readonly AnySubscriber[],
   ): this {
     this.schema.register(eventClass, subscribers);
     return this;

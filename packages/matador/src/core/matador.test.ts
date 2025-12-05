@@ -1,17 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createTopology } from '../topology/builder.js';
 import { LocalTransport } from '../transport/local/local-transport.js';
-import { BaseEvent, createSubscriber } from '../types/index.js';
+import { MatadorEvent, createSubscriber } from '../types/index.js';
 import { Matador, createMatador } from './matador.js';
 
-class UserCreatedEvent extends BaseEvent<{ userId: string; email: string }> {
+class UserCreatedEvent extends MatadorEvent {
   static readonly key = 'user.created';
   static readonly description = 'Fired when a new user is created';
+
+  constructor(public data: { userId: string; email: string }) {
+    super();
+  }
 }
 
-class OrderPlacedEvent extends BaseEvent<{ orderId: string; amount: number }> {
+class OrderPlacedEvent extends MatadorEvent {
   static readonly key = 'order.placed';
   static readonly description = 'Fired when an order is placed';
+
+  constructor(public data: { orderId: string; amount: number }) {
+    super();
+  }
 }
 
 describe('Matador', () => {
@@ -49,9 +57,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'send-welcome-email',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('send-welcome-email',
         async () => {},
       );
 
@@ -69,14 +75,10 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const userSub = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const userSub = createSubscriber('handle-user',
         async () => {},
       );
-      const orderSub = createSubscriber(
-        'handle-order',
-        OrderPlacedEvent,
+      const orderSub = createSubscriber('handle-order',
         async () => {},
       );
 
@@ -95,9 +97,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -117,9 +117,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -141,14 +139,10 @@ describe('Matador', () => {
         .build();
 
       // Register duplicate subscriber names
-      const sub1 = createSubscriber(
-        'same-name',
-        UserCreatedEvent,
+      const sub1 = createSubscriber('same-name',
         async () => {},
       );
-      const sub2 = createSubscriber(
-        'same-name',
-        UserCreatedEvent,
+      const sub2 = createSubscriber('same-name',
         async () => {},
       );
 
@@ -168,9 +162,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -195,9 +187,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -225,9 +215,9 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const sub1 = createSubscriber('sub-1', UserCreatedEvent, async () => {});
-      const sub2 = createSubscriber('sub-2', UserCreatedEvent, async () => {});
-      const sub3 = createSubscriber('sub-3', UserCreatedEvent, async () => {});
+      const sub1 = createSubscriber('sub-1', async () => {});
+      const sub2 = createSubscriber('sub-2', async () => {});
+      const sub3 = createSubscriber('sub-3', async () => {});
 
       matador = createMatador({ transport, topology }).register(
         UserCreatedEvent,
@@ -252,9 +242,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -285,9 +273,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -308,9 +294,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -332,9 +316,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -367,9 +349,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -389,9 +369,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -415,9 +393,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 
@@ -441,9 +417,7 @@ describe('Matador', () => {
         .addQueue('notifications')
         .build();
 
-      const subscriber = createSubscriber(
-        'handle-user',
-        UserCreatedEvent,
+      const subscriber = createSubscriber('handle-user',
         async () => {},
       );
 

@@ -8,7 +8,7 @@ export interface SchemaEntry<T = unknown> {
   readonly eventClass: EventClass<T>;
 
   /** Subscribers for this event */
-  readonly subscribers: readonly AnySubscriber<T>[];
+  readonly subscribers: readonly AnySubscriber[];
 }
 
 /**
@@ -25,7 +25,7 @@ export interface SchemaEntry<T = unknown> {
  */
 export type SchemaEntryTuple<T = unknown> = readonly [
   eventClass: EventClass<T>,
-  subscribers: readonly AnySubscriber<T>[],
+  subscribers: readonly AnySubscriber[],
 ];
 
 /**

@@ -10,7 +10,7 @@
 
 import {
   type AnySubscriber,
-  BaseEvent,
+  MatadorEvent,
   type EventClass,
   type Topology,
   createSubscriber,
@@ -21,32 +21,42 @@ import {
 // Events
 // ============================================================================
 
-export class UserCreatedEvent extends BaseEvent<{
-  userId: string;
-  email: string;
-  name: string;
-}> {
+export class UserCreatedEvent extends MatadorEvent {
   static readonly key = 'user.created';
   static readonly description = 'Fired when a new user is created';
+
+  constructor(
+    public data: {
+      userId: string;
+      email: string;
+      name: string;
+    },
+  ) {
+    super();
+  }
 }
 
-export class OrderPlacedEvent extends BaseEvent<{
-  orderId: string;
-  userId: string;
-  amount: number;
-  items: Array<{ productId: string; quantity: number }>;
-}> {
+export class OrderPlacedEvent extends MatadorEvent {
   static readonly key = 'order.placed';
   static readonly description = 'Fired when a new order is placed';
+
+  constructor(
+    public data: {
+      orderId: string;
+      userId: string;
+      amount: number;
+      items: Array<{ productId: string; quantity: number }>;
+    },
+  ) {
+    super();
+  }
 }
 
 // ============================================================================
 // Subscribers
 // ============================================================================
 
-const sendWelcomeEmail = createSubscriber(
-  'send-welcome-email',
-  UserCreatedEvent,
+const sendWelcomeEmail = createSubscriber('send-welcome-email',
   async (data, docket) => {
     console.log(`  📧 Sending welcome email to ${data.email}`);
     console.log(`     User: ${data.name} (${data.userId})`);
@@ -57,18 +67,14 @@ const sendWelcomeEmail = createSubscriber(
   { idempotent: 'yes', importance: 'should-investigate' },
 );
 
-const trackUserAnalytics = createSubscriber(
-  'track-user-analytics',
-  UserCreatedEvent,
+const trackUserAnalytics = createSubscriber('track-user-analytics',
   async (data) => {
     console.log(`  📊 Tracking analytics for new user: ${data.userId}`);
   },
   { idempotent: 'yes', importance: 'can-ignore' },
 );
 
-const processOrder = createSubscriber(
-  'process-order',
-  OrderPlacedEvent,
+const processOrder = createSubscriber('process-order',
   async (data) => {
     console.log(`  📦 Processing order ${data.orderId}`);
     console.log(`     Amount: $${data.amount.toFixed(2)}`);
@@ -77,9 +83,7 @@ const processOrder = createSubscriber(
   { idempotent: 'no', importance: 'must-investigate' },
 );
 
-const sendOrderConfirmation = createSubscriber(
-  'send-order-confirmation',
-  OrderPlacedEvent,
+const sendOrderConfirmation = createSubscriber('send-order-confirmation',
   async (data) => {
     console.log(`  📧 Sending order confirmation for ${data.orderId}`);
   },

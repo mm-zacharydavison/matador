@@ -19,10 +19,14 @@ export type {
   Event,
   EventClass,
   EventData,
+  EventKey,
   EventOptions,
   EventStatic,
+  JsonPrimitive,
+  JsonRecord,
+  JsonValue,
 } from './event.js';
-export { BaseEvent } from './event.js';
+export { MatadorEvent } from './event.js';
 
 export type {
   AnySubscriber,

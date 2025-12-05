@@ -29,6 +29,7 @@ export type {
   Event,
   EventClass,
   EventData,
+  EventKey,
   EventOptions,
   EventStatic,
   Idempotency,
@@ -42,7 +43,7 @@ export type {
   ValidationResult,
 } from './types/index.js';
 export {
-  BaseEvent,
+  MatadorEvent,
   createEnvelope,
   createSubscriber,
   createSubscriberStub,
