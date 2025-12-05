@@ -93,7 +93,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
         queueName,
         async (env, receipt) => {
           receivedOrder.push(
-            (env.payload.data as { priority: number }).priority,
+            (env.data as { priority: number }).priority,
           );
           await transport.complete(receipt);
         },

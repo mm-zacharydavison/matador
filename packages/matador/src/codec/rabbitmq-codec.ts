@@ -30,11 +30,11 @@ const HEADERS = {
 
 /**
  * Body structure for v2 messages.
- * Only contains id, payload, and optionally metadata (since it can be large).
+ * Only contains id, data, and optionally metadata (since it can be large).
  */
 interface V2Body {
   readonly id: string;
-  readonly payload: { readonly data: unknown };
+  readonly data: unknown;
   readonly metadata?: Record<string, unknown>;
 }
 
@@ -71,10 +71,10 @@ export class RabbitMQCodec implements HeaderAwareCodec {
   encode(envelope: Envelope): EncodedMessage {
     const { docket } = envelope;
 
-    // Body only contains id, payload, and metadata (since metadata can be large)
+    // Body only contains id, data, and metadata (since metadata can be large)
     const body: V2Body = {
       id: envelope.id,
-      payload: envelope.payload,
+      data: envelope.data,
       ...(docket.metadata !== undefined && { metadata: docket.metadata }),
     };
 
@@ -164,8 +164,8 @@ export class RabbitMQCodec implements HeaderAwareCodec {
     const obj = value as Record<string, unknown>;
     return (
       typeof obj['id'] === 'string' &&
-      typeof obj['payload'] === 'object' &&
-      obj['payload'] !== null
+      'data' in obj &&
+      !('key' in obj) // Distinguish from v1 which also has 'data'
     );
   }
 
@@ -215,7 +215,7 @@ export class RabbitMQCodec implements HeaderAwareCodec {
 
     return {
       id: body.id,
-      payload: body.payload,
+      data: body.data,
       docket,
     };
   }
@@ -287,7 +287,7 @@ export class RabbitMQCodec implements HeaderAwareCodec {
 
     return {
       id: eventId,
-      payload: { data: body.data },
+      data: body.data,
       docket,
     };
   }

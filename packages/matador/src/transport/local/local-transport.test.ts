@@ -57,7 +57,7 @@ describe('LocalTransport', () => {
       const received = await transport.receiveOne('test-queue');
       expect(received).not.toBeNull();
       expect(received?.envelope.id).toBe(envelope.id);
-      expect(received?.envelope.payload.data).toEqual({ test: 'data' });
+      expect(received?.envelope.data).toEqual({ test: 'data' });
     });
 
     it('should track queue size correctly', async () => {

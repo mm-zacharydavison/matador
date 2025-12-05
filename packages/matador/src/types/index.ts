@@ -7,12 +7,7 @@ export type {
 } from './common.js';
 export { invalidResult, validResult } from './common.js';
 
-export type {
-  CreateEnvelopeOptions,
-  Docket,
-  Envelope,
-  EnvelopePayload,
-} from './envelope.js';
+export type { CreateEnvelopeOptions, Docket, Envelope } from './envelope.js';
 export { createEnvelope } from './envelope.js';
 
 export type {

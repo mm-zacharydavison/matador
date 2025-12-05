@@ -150,7 +150,7 @@ export class ProcessingPipeline {
 
       try {
         result = await subscriber.callback(
-          envelope.payload.data,
+          envelope.data,
           envelope.docket,
         );
       } catch (e) {

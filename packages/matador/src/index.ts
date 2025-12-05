@@ -25,7 +25,6 @@ export type {
   DeliveryMode,
   Docket,
   Envelope,
-  EnvelopePayload,
   Event,
   EventClass,
   EventData,

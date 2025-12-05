@@ -49,8 +49,7 @@ export class JsonCodec implements Codec {
 
     // Required top-level fields
     if (typeof envelope['id'] !== 'string') return false;
-    if (typeof envelope['payload'] !== 'object' || envelope['payload'] === null)
-      return false;
+    if (!('data' in envelope)) return false;
     if (typeof envelope['docket'] !== 'object' || envelope['docket'] === null)
       return false;
 
@@ -64,10 +63,6 @@ export class JsonCodec implements Codec {
     if (typeof docket['createdAt'] !== 'string') return false;
     // Observability
     if (typeof docket['importance'] !== 'string') return false;
-
-    // Validate payload
-    const payload = envelope['payload'] as Record<string, unknown>;
-    if (!('data' in payload)) return false;
 
     return true;
   }

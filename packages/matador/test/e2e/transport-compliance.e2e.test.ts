@@ -292,7 +292,7 @@ describe.each(transportFactories)(
           await waitFor(() => received.length > 0, 5000);
 
           const receivedEnvelope = received[0] as typeof envelope;
-          expect(receivedEnvelope.payload.data).toEqual(envelope.payload.data);
+          expect(receivedEnvelope.data).toEqual(envelope.data);
           expect(receivedEnvelope.docket.eventKey).toBe(
             envelope.docket.eventKey,
           );

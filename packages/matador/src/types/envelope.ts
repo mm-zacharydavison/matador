@@ -1,26 +1,18 @@
 import type { Importance } from './common.js';
 
 /**
- * Message envelope containing the event payload and routing/observability metadata.
+ * Message envelope containing the event data and routing/observability metadata.
  * This is the transport-agnostic message format used throughout Matador.
  */
 export interface Envelope<T = unknown> {
   /** Unique message ID (UUID v4) */
   readonly id: string;
 
-  /** The event payload data */
-  readonly payload: EnvelopePayload<T>;
+  /** The event data */
+  readonly data: T;
 
   /** Routing, processing state, and observability metadata */
   readonly docket: Docket;
-}
-
-/**
- * Envelope payload structure containing the event data.
- */
-export interface EnvelopePayload<T = unknown> {
-  /** The event data */
-  readonly data: T;
 }
 
 /**
@@ -84,18 +76,14 @@ type DocketCreateFields = Pick<
 >;
 
 /**
- * Fields from EnvelopePayload that can be specified when creating an envelope.
- */
-type PayloadCreateFields<T> = Pick<EnvelopePayload<T>, 'data'>;
-
-/**
  * Options for creating an envelope.
  */
-export interface CreateEnvelopeOptions<T>
-  extends DocketCreateFields,
-    PayloadCreateFields<T> {
+export interface CreateEnvelopeOptions<T> extends DocketCreateFields {
   /** Optional custom ID (defaults to UUID v4) */
   readonly id?: string | undefined;
+
+  /** The event data */
+  readonly data: T;
 
   /**
    * Event-specific metadata to include in the docket.
@@ -131,9 +119,7 @@ export function createEnvelope<T>(
 
   return {
     id: options.id ?? crypto.randomUUID(),
-    payload: {
-      data: options.data,
-    },
+    data: options.data,
     docket: {
       // Routing
       eventKey: options.eventKey,
