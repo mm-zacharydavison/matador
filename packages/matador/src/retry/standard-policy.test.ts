@@ -8,12 +8,12 @@ import type { MessageReceipt } from '../transport/transport.js';
 import { createEnvelope } from '../types/envelope.js';
 import type { SubscriberDefinition } from '../types/subscriber.js';
 import type { RetryContext, RetryDecision } from './policy.js';
-import { StandardRetryPolicy, createRetryPolicy } from './standard-policy.js';
+import { StandardRetryPolicy } from './standard-policy.js';
 
 describe('StandardRetryPolicy', () => {
   describe('shouldRetry', () => {
     it('should dead-letter on EventAssertionError', () => {
-      const policy = createRetryPolicy();
+      const policy = StandardRetryPolicy.create();
       const context = createContext(new EventAssertionError('Invalid event'));
 
       const decision = policy.shouldRetry(context);
@@ -25,7 +25,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should dead-letter on DontRetry error', () => {
-      const policy = createRetryPolicy();
+      const policy = StandardRetryPolicy.create();
       const context = createContext(new DontRetry('Business rule violation'));
 
       const decision = policy.shouldRetry(context);
@@ -37,7 +37,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should retry on DoRetry error if under max attempts', () => {
-      const policy = createRetryPolicy({ maxAttempts: 3 });
+      const policy = StandardRetryPolicy.create({ maxAttempts: 3 });
       const context = createContext(new DoRetry('Temporary failure'), {
         attemptNumber: 1,
       });
@@ -50,7 +50,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should dead-letter on DoRetry error if max attempts exceeded', () => {
-      const policy = createRetryPolicy({ maxAttempts: 3 });
+      const policy = StandardRetryPolicy.create({ maxAttempts: 3 });
       const context = createContext(new DoRetry('Temporary failure'), {
         attemptNumber: 3,
       });
@@ -63,7 +63,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should dead-letter when max attempts exceeded', () => {
-      const policy = createRetryPolicy({ maxAttempts: 3 });
+      const policy = StandardRetryPolicy.create({ maxAttempts: 3 });
       const context = createContext(new Error('Generic error'), {
         attemptNumber: 3,
       });
@@ -77,7 +77,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should dead-letter non-idempotent subscriber on redelivery', () => {
-      const policy = createRetryPolicy();
+      const policy = StandardRetryPolicy.create();
       const context = createContext(
         new Error('Some error'),
         { attemptNumber: 1, redelivered: true },
@@ -92,7 +92,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should retry idempotent subscriber on redelivery', () => {
-      const policy = createRetryPolicy();
+      const policy = StandardRetryPolicy.create();
       const context = createContext(
         new Error('Some error'),
         { attemptNumber: 1, redelivered: true },
@@ -105,7 +105,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should retry generic errors with backoff', () => {
-      const policy = createRetryPolicy({ maxAttempts: 5 });
+      const policy = StandardRetryPolicy.create({ maxAttempts: 5 });
       const context = createContext(new Error('Generic error'), {
         attemptNumber: 1,
       });
@@ -120,7 +120,7 @@ describe('StandardRetryPolicy', () => {
 
   describe('getDelay', () => {
     it('should calculate exponential backoff', () => {
-      const policy = createRetryPolicy({
+      const policy = StandardRetryPolicy.create({
         baseDelay: 1000,
         backoffMultiplier: 2,
       });
@@ -141,7 +141,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should cap delay at maxDelay', () => {
-      const policy = createRetryPolicy({
+      const policy = StandardRetryPolicy.create({
         baseDelay: 1000,
         backoffMultiplier: 10,
         maxDelay: 5000,
@@ -167,7 +167,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should accept custom configuration', () => {
-      const policy = createRetryPolicy({
+      const policy = StandardRetryPolicy.create({
         maxAttempts: 1,
         baseDelay: 500,
         maxDelay: 1000,
@@ -182,7 +182,7 @@ describe('StandardRetryPolicy', () => {
     });
 
     it('should merge partial configuration with defaults', () => {
-      const policy = createRetryPolicy({ maxAttempts: 10 });
+      const policy = StandardRetryPolicy.create({ maxAttempts: 10 });
       // Use attemptNumber: 5 but deliveryCount: 3 to avoid poison detection
       const context = createContext(new Error(), {
         attemptNumber: 5,

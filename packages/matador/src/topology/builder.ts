@@ -35,6 +35,13 @@ export class TopologyValidationError extends Error implements HasDescription {
  * Fluent builder for creating Topology configurations.
  */
 export class TopologyBuilder {
+  /**
+   * Creates a new TopologyBuilder instance.
+   */
+  static create(): TopologyBuilder {
+    return new TopologyBuilder();
+  }
+
   private namespace = '';
   private queues: QueueDefinition[] = [];
   private deadLetter: DeadLetterConfig = {
@@ -55,12 +62,20 @@ export class TopologyBuilder {
     return this;
   }
 
+
   /**
    * Adds a queue to the topology.
    */
   addQueue(name: string, options: QueueOptions = {}): this {
     this.queues.push({ name, ...options });
     return this;
+  }
+
+  /**
+   * Alias for addQueue().
+   */
+  queue(name: string, options: QueueOptions = {}): this {
+    return this.addQueue(name, options);
   }
 
   /**
@@ -184,9 +199,3 @@ export class TopologyBuilder {
   }
 }
 
-/**
- * Creates a new TopologyBuilder instance.
- */
-export function createTopology(): TopologyBuilder {
-  return new TopologyBuilder();
-}

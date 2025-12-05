@@ -14,10 +14,7 @@ import {
 import type { Topology } from '../../src/topology/types.js';
 import type { Subscription, Transport } from '../../src/transport/index.js';
 import { LocalTransport } from '../../src/transport/local/local-transport.js';
-import {
-  RabbitMQTransport,
-  createRabbitMQTransport,
-} from '../../src/transport/rabbitmq/rabbitmq-transport.js';
+import { RabbitMQTransport } from '../../src/transport/rabbitmq/rabbitmq-transport.js';
 import { createEnvelope } from '../../src/types/index.js';
 
 /**
@@ -117,7 +114,7 @@ const transportFactories: TransportFactory[] = [
       if (!rabbitConnectionUrl) {
         throw new Error('RabbitMQ container not started');
       }
-      return createRabbitMQTransport({
+      return RabbitMQTransport.create({
         url: rabbitConnectionUrl,
         quorumQueues: false, // Use classic queues for faster tests
         defaultPrefetch: 10,

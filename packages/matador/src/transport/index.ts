@@ -36,7 +36,4 @@ export type { FallbackTransportConfig } from './fallback/fallback-transport.js';
 export { FallbackTransport } from './fallback/fallback-transport.js';
 
 export type { RabbitMQTransportConfig } from './rabbitmq/rabbitmq-transport.js';
-export {
-  RabbitMQTransport,
-  createRabbitMQTransport,
-} from './rabbitmq/rabbitmq-transport.js';
+export { RabbitMQTransport } from './rabbitmq/rabbitmq-transport.js';

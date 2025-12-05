@@ -15,10 +15,7 @@ import type { TransportFallbackContext } from '../../src/hooks/index.js';
 import { FallbackTransport } from '../../src/transport/fallback/fallback-transport.js';
 import type { Subscription } from '../../src/transport/index.js';
 import { LocalTransport } from '../../src/transport/local/local-transport.js';
-import {
-  type RabbitMQTransport,
-  createRabbitMQTransport,
-} from '../../src/transport/rabbitmq/rabbitmq-transport.js';
+import { RabbitMQTransport } from '../../src/transport/rabbitmq/rabbitmq-transport.js';
 import {
   createTestEnvelope,
   createTestTopology,
@@ -57,7 +54,7 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
       subscriptions = [];
       fallbackEvents = [];
 
-      rabbitTransport = createRabbitMQTransport({
+      rabbitTransport = RabbitMQTransport.create({
         url: connectionUrl,
         quorumQueues: false,
       });

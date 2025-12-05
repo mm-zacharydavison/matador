@@ -7,6 +7,13 @@ import { CodecDecodeError } from './codec.js';
  * Uses standard JSON.stringify/parse with Date handling.
  */
 export class JsonCodec implements Codec {
+  /**
+   * Creates a new JSON codec instance.
+   */
+  static create(): JsonCodec {
+    return new JsonCodec();
+  }
+
   readonly contentType = 'application/json';
 
   encode(envelope: Envelope): Uint8Array {
@@ -68,9 +75,3 @@ export class JsonCodec implements Codec {
   }
 }
 
-/**
- * Creates a new JSON codec instance.
- */
-export function createJsonCodec(): JsonCodec {
-  return new JsonCodec();
-}

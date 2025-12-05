@@ -51,6 +51,10 @@ export interface DispatchError {
  * 4. Sending to appropriate queues via transport
  */
 export class FanoutEngine {
+  static create(config: FanoutConfig): FanoutEngine {
+    return new FanoutEngine(config);
+  }
+
   private readonly transport: Transport;
   private readonly schema: SchemaRegistry;
   private readonly hooks: SafeHooks;
@@ -180,9 +184,3 @@ export class FanoutEngine {
   }
 }
 
-/**
- * Creates a new fanout engine.
- */
-export function createFanoutEngine(config: FanoutConfig): FanoutEngine {
-  return new FanoutEngine(config);
-}

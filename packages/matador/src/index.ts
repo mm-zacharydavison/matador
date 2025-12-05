@@ -9,9 +9,6 @@ export type {
   ShutdownState,
 } from './core/index.js';
 export {
-  createFanoutEngine,
-  createMatador,
-  createShutdownManager,
   defaultShutdownConfig,
   FanoutEngine,
   Matador,
@@ -74,7 +71,6 @@ export type {
 } from './transport/index.js';
 export {
   ConnectionManager,
-  createRabbitMQTransport,
   defaultConnectionConfig,
   hasNativeDeadLetter,
   LocalTransport,
@@ -93,7 +89,6 @@ export type {
   Topology,
 } from './topology/index.js';
 export {
-  createTopology,
   getDeadLetterQueueName,
   getQualifiedQueueName,
   getRetryQueueName,
@@ -107,13 +102,7 @@ export type {
   EncodedMessage,
   HeaderAwareCodec,
 } from './codec/index.js';
-export {
-  CodecDecodeError,
-  createJsonCodec,
-  createRabbitMQCodec,
-  JsonCodec,
-  RabbitMQCodec,
-} from './codec/index.js';
+export { CodecDecodeError, JsonCodec, RabbitMQCodec } from './codec/index.js';
 
 // Schema
 export type {
@@ -125,7 +114,6 @@ export type {
   SchemaValidationResult,
 } from './schema/index.js';
 export {
-  createSchemaRegistry,
   isSchemaEntryTuple,
   SchemaError,
   SchemaRegistry,
@@ -139,7 +127,6 @@ export type {
   StandardRetryPolicyConfig,
 } from './retry/index.js';
 export {
-  createRetryPolicy,
   defaultRetryConfig,
   StandardRetryPolicy,
 } from './retry/index.js';
@@ -156,11 +143,11 @@ export type {
   WorkerExecuteFn,
   WorkerSuccessContext,
 } from './hooks/index.js';
-export { consoleLogger, createSafeHooks, SafeHooks } from './hooks/index.js';
+export { consoleLogger, SafeHooks } from './hooks/index.js';
 
 // Pipeline
 export type { PipelineConfig, ProcessResult } from './pipeline/index.js';
-export { createPipeline, ProcessingPipeline } from './pipeline/index.js';
+export { ProcessingPipeline } from './pipeline/index.js';
 
 // Errors
 export type { HasDescription } from './errors/index.js';

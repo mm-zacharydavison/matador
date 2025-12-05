@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { createTopology } from '../topology/builder.js';
+import { TopologyBuilder } from '../topology/builder.js';
 import { LocalTransport } from '../transport/local/local-transport.js';
 import { MatadorEvent, createSubscriber } from '../types/index.js';
-import { Matador, createMatador } from './matador.js';
+import { Matador } from './matador.js';
 
 class UserCreatedEvent extends MatadorEvent {
   static readonly key = 'user.created';
@@ -38,12 +38,12 @@ describe('Matador', () => {
 
   describe('configuration', () => {
     it('should create with minimal config', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
 
-      matador = createMatador({ transport, topology });
+      matador = Matador.create({ transport, topology });
 
       expect(matador).toBeInstanceOf(Matador);
       expect(matador.isConnected()).toBe(false);
@@ -52,7 +52,7 @@ describe('Matador', () => {
 
   describe('registration', () => {
     it('should register events with subscribers', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -61,7 +61,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -70,7 +70,7 @@ describe('Matador', () => {
     });
 
     it('should support chained registration', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -82,7 +82,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology })
+      matador = Matador.create({ transport, topology })
         .register(UserCreatedEvent, [userSub])
         .register(OrderPlacedEvent, [orderSub]);
 
@@ -92,7 +92,7 @@ describe('Matador', () => {
 
   describe('start', () => {
     it('should connect transport and be ready', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -101,7 +101,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -112,7 +112,7 @@ describe('Matador', () => {
     });
 
     it('should throw if started twice', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -121,7 +121,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -133,7 +133,7 @@ describe('Matador', () => {
     });
 
     it('should throw on invalid schema', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -146,7 +146,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [sub1, sub2],
       );
@@ -157,7 +157,7 @@ describe('Matador', () => {
 
   describe('dispatch', () => {
     it('should throw if not started', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -166,7 +166,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -182,7 +182,7 @@ describe('Matador', () => {
     });
 
     it('should dispatch events to transport', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -191,7 +191,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -210,7 +210,7 @@ describe('Matador', () => {
     });
 
     it('should create one envelope per subscriber', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -219,7 +219,7 @@ describe('Matador', () => {
       const sub2 = createSubscriber('sub-2', async () => {});
       const sub3 = createSubscriber('sub-3', async () => {});
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [sub1, sub2, sub3],
       );
@@ -237,7 +237,7 @@ describe('Matador', () => {
     });
 
     it('should include correlation ID in dispatch', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -246,7 +246,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -268,7 +268,7 @@ describe('Matador', () => {
 
   describe('shutdown', () => {
     it('should gracefully shutdown', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -277,7 +277,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -289,7 +289,7 @@ describe('Matador', () => {
     });
 
     it('should be idempotent', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -298,7 +298,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -311,7 +311,7 @@ describe('Matador', () => {
     });
 
     it('should reject dispatch after shutdown initiated', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -320,7 +320,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -344,7 +344,7 @@ describe('Matador', () => {
 
   describe('idle state', () => {
     it('should report idle when no processing', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -353,7 +353,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -364,7 +364,7 @@ describe('Matador', () => {
     });
 
     it('should return handlers state', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -373,7 +373,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -388,7 +388,7 @@ describe('Matador', () => {
     });
 
     it('should wait for idle', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -397,7 +397,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(
+      matador = Matador.create({ transport, topology }).register(
         UserCreatedEvent,
         [subscriber],
       );
@@ -411,7 +411,7 @@ describe('Matador', () => {
 
   describe('consuming from queues', () => {
     it('should subscribe to specified queues', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .addQueue('notifications')
@@ -421,7 +421,7 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { TopologyValidationError, createTopology } from './builder.js';
+import { TopologyBuilder, TopologyValidationError } from './builder.js';
 
 describe('TopologyBuilder', () => {
   describe('withNamespace', () => {
     it('should set the namespace', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('myapp')
         .addQueue('events')
         .build();
@@ -13,13 +13,13 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject empty namespace', () => {
-      const builder = createTopology().withNamespace('').addQueue('events');
+      const builder = TopologyBuilder.create().withNamespace('').addQueue('events');
 
       expect(() => builder.build()).toThrow(TopologyValidationError);
     });
 
     it('should reject namespace starting with number', () => {
-      const builder = createTopology()
+      const builder = TopologyBuilder.create()
         .withNamespace('123app')
         .addQueue('events');
 
@@ -27,7 +27,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should allow hyphens and underscores in namespace', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('my-app_v2')
         .addQueue('events')
         .build();
@@ -38,7 +38,7 @@ describe('TopologyBuilder', () => {
 
   describe('addQueue', () => {
     it('should add a queue with defaults', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -48,7 +48,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should add queue with options', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events', {
           concurrency: 5,
@@ -63,7 +63,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should add multiple queues', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .addQueue('notifications')
@@ -74,7 +74,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject duplicate queue names', () => {
-      const builder = createTopology()
+      const builder = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .addQueue('events');
@@ -83,13 +83,13 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject empty queue name', () => {
-      const builder = createTopology().withNamespace('test').addQueue('');
+      const builder = TopologyBuilder.create().withNamespace('test').addQueue('');
 
       expect(() => builder.build()).toThrow('Queue name cannot be empty');
     });
 
     it('should reject queue names starting with number', () => {
-      const builder = createTopology()
+      const builder = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('123queue');
 
@@ -97,7 +97,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject invalid concurrency', () => {
-      const builder = createTopology()
+      const builder = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events', { concurrency: 0 });
 
@@ -105,7 +105,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject negative consumer timeout', () => {
-      const builder = createTopology()
+      const builder = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events', { consumerTimeout: -1 });
 
@@ -117,7 +117,7 @@ describe('TopologyBuilder', () => {
 
   describe('withDeadLetter', () => {
     it('should configure dead letter settings', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .withDeadLetter({
@@ -131,7 +131,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should merge with defaults', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .withDeadLetter({ unhandled: { enabled: false } })
@@ -145,7 +145,7 @@ describe('TopologyBuilder', () => {
 
   describe('withRetry', () => {
     it('should configure retry settings', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .withRetry({
@@ -161,7 +161,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject negative default delay', () => {
-      const builder = createTopology()
+      const builder = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .withRetry({ defaultDelayMs: -1 });
@@ -170,7 +170,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject max delay less than default', () => {
-      const builder = createTopology()
+      const builder = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .withRetry({
@@ -186,7 +186,7 @@ describe('TopologyBuilder', () => {
 
   describe('withoutRetry', () => {
     it('should disable retry', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .withoutRetry()
@@ -198,7 +198,7 @@ describe('TopologyBuilder', () => {
 
   describe('withoutDeadLetter', () => {
     it('should disable dead letter queues', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .withoutDeadLetter()
@@ -211,7 +211,7 @@ describe('TopologyBuilder', () => {
 
   describe('validate', () => {
     it('should return issues without throwing', () => {
-      const builder = createTopology();
+      const builder = TopologyBuilder.create();
       const issues = builder.validate();
 
       expect(issues.length).toBeGreaterThan(0);
@@ -220,7 +220,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should return empty array for valid topology', () => {
-      const builder = createTopology().withNamespace('test').addQueue('events');
+      const builder = TopologyBuilder.create().withNamespace('test').addQueue('events');
 
       const issues = builder.validate();
       expect(issues).toHaveLength(0);
@@ -229,7 +229,7 @@ describe('TopologyBuilder', () => {
 
   describe('build', () => {
     it('should throw TopologyValidationError with issues', () => {
-      const builder = createTopology();
+      const builder = TopologyBuilder.create();
 
       try {
         builder.build();
@@ -243,7 +243,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should return immutable topology', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
@@ -258,7 +258,7 @@ describe('TopologyBuilder', () => {
 
   describe('exact queue option', () => {
     it('should mark queue as exact (external)', () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('external-queue', { exact: true })
         .build();

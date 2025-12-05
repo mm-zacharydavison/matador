@@ -3,11 +3,10 @@ import {
   MatadorEvent,
   DoRetry,
   DontRetry,
-  type Matador,
+  Matador,
   LocalTransport,
-  createMatador,
   createSubscriber,
-  createTopology,
+  TopologyBuilder,
 } from '../../src/index.js';
 
 class UserCreatedEvent extends MatadorEvent {
@@ -67,7 +66,7 @@ describe('Matador Integration Tests', () => {
     it('should dispatch event and process successfully', async () => {
       const processedUsers: string[] = [];
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-test')
         .addQueue('events')
         .build();
@@ -78,7 +77,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -106,7 +105,7 @@ describe('Matador Integration Tests', () => {
       const analytics: string[] = [];
       const emails: string[] = [];
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-fanout')
         .addQueue('events')
         .build();
@@ -129,7 +128,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -155,7 +154,7 @@ describe('Matador Integration Tests', () => {
       const users: string[] = [];
       const orders: string[] = [];
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-multi-event')
         .addQueue('events')
         .build();
@@ -172,7 +171,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -204,7 +203,7 @@ describe('Matador Integration Tests', () => {
       let attempts = 0;
       const maxAttempts = 3;
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-retry')
         .addQueue('events')
         .withRetry({ enabled: true, defaultDelayMs: 10, maxDelayMs: 100 })
@@ -219,7 +218,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -245,7 +244,7 @@ describe('Matador Integration Tests', () => {
     it('should not retry when DontRetry is thrown', async () => {
       let attempts = 0;
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-dont-retry')
         .addQueue('events')
         .build();
@@ -257,7 +256,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -283,7 +282,7 @@ describe('Matador Integration Tests', () => {
     it('should propagate correlation ID through event chain', async () => {
       const correlationIds: string[] = [];
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-correlation')
         .addQueue('events')
         .build();
@@ -296,7 +295,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -319,7 +318,7 @@ describe('Matador Integration Tests', () => {
     it('should include metadata in docket', async () => {
       const receivedMetadata: Record<string, unknown>[] = [];
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-metadata')
         .addQueue('events')
         .build();
@@ -332,7 +331,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -369,7 +368,7 @@ describe('Matador Integration Tests', () => {
       const processed: string[] = [];
       let processingStarted = false;
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-shutdown')
         .addQueue('events')
         .build();
@@ -383,7 +382,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -414,7 +413,7 @@ describe('Matador Integration Tests', () => {
     });
 
     it('should reject new dispatches during shutdown', async () => {
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-shutdown-reject')
         .addQueue('events')
         .build();
@@ -423,7 +422,7 @@ describe('Matador Integration Tests', () => {
         async () => {},
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -449,7 +448,7 @@ describe('Matador Integration Tests', () => {
     it('should filter subscribers based on enabled hook', async () => {
       const processed: string[] = [];
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-filter')
         .addQueue('events')
         .build();
@@ -468,7 +467,7 @@ describe('Matador Integration Tests', () => {
         { enabled: () => false },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],
@@ -496,7 +495,7 @@ describe('Matador Integration Tests', () => {
     it('should track handlers state during processing', async () => {
       let wasNotIdle = false;
 
-      const topology = createTopology()
+      const topology = TopologyBuilder.create()
         .withNamespace('int-state')
         .addQueue('events')
         .build();
@@ -512,7 +511,7 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = createMatador({
+      matador = Matador.create({
         transport,
         topology,
         consumeFrom: ['events'],

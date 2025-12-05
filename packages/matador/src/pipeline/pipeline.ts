@@ -43,6 +43,10 @@ export interface ProcessResult {
  * 4. Handle success/failure with retry policy
  */
 export class ProcessingPipeline {
+  static create(config: PipelineConfig): ProcessingPipeline {
+    return new ProcessingPipeline(config);
+  }
+
   private readonly transport: Transport;
   private readonly schema: SchemaRegistry;
   private readonly codec: Codec;
@@ -266,9 +270,3 @@ export class ProcessingPipeline {
   }
 }
 
-/**
- * Creates a new processing pipeline.
- */
-export function createPipeline(config: PipelineConfig): ProcessingPipeline {
-  return new ProcessingPipeline(config);
-}

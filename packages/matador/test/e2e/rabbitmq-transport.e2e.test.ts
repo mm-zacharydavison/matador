@@ -12,10 +12,7 @@ import {
   type StartedRabbitMQContainer,
 } from '@testcontainers/rabbitmq';
 import type { Subscription } from '../../src/transport/index.js';
-import {
-  type RabbitMQTransport,
-  createRabbitMQTransport,
-} from '../../src/transport/rabbitmq/rabbitmq-transport.js';
+import { RabbitMQTransport } from '../../src/transport/rabbitmq/rabbitmq-transport.js';
 import {
   createTestEnvelope,
   createTestTopology,
@@ -49,7 +46,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
     let subscriptions: Subscription[] = [];
 
     beforeEach(async () => {
-      transport = createRabbitMQTransport({
+      transport = RabbitMQTransport.create({
         url: connectionUrl,
         quorumQueues: false, // Use classic queues for faster tests
         defaultPrefetch: 5,
@@ -204,7 +201,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
 
   describe('reconnection behavior', () => {
     it('should handle disconnect and reconnect', async () => {
-      const transport = createRabbitMQTransport({
+      const transport = RabbitMQTransport.create({
         url: connectionUrl,
         connection: {
           maxReconnectAttempts: 3,
@@ -231,7 +228,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
     const subscriptions: Subscription[] = [];
 
     beforeEach(async () => {
-      transport = createRabbitMQTransport({
+      transport = RabbitMQTransport.create({
         url: connectionUrl,
         quorumQueues: false,
         defaultPrefetch: 2,

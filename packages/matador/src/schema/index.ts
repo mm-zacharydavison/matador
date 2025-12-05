@@ -9,8 +9,4 @@ export type {
 
 export { isSchemaEntryTuple } from './types.js';
 
-export {
-  createSchemaRegistry,
-  SchemaError,
-  SchemaRegistry,
-} from './registry.js';
+export { SchemaError, SchemaRegistry } from './registry.js';

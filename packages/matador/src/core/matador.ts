@@ -1,17 +1,17 @@
 import type { Codec } from '../codec/index.js';
-import { createJsonCodec } from '../codec/index.js';
+import { JsonCodec } from '../codec/index.js';
 import {
   InvalidSchemaError,
   NotStartedError,
   ShutdownInProgressError,
 } from '../errors/index.js';
 import type { MatadorHooks } from '../hooks/index.js';
-import { createSafeHooks } from '../hooks/index.js';
-import { createPipeline } from '../pipeline/index.js';
+import { SafeHooks } from '../hooks/index.js';
+import { ProcessingPipeline } from '../pipeline/index.js';
 import type { RetryPolicy } from '../retry/index.js';
-import { createRetryPolicy } from '../retry/index.js';
+import { StandardRetryPolicy } from '../retry/index.js';
 import type { MatadorSchema } from '../schema/index.js';
-import { createSchemaRegistry, isSchemaEntryTuple } from '../schema/index.js';
+import { isSchemaEntryTuple, SchemaRegistry } from '../schema/index.js';
 import type { Topology } from '../topology/index.js';
 import { getQualifiedQueueName } from '../topology/index.js';
 import type { Subscription, Transport } from '../transport/index.js';
@@ -22,9 +22,9 @@ import type {
   EventOptions,
 } from '../types/index.js';
 import type { DispatchResult } from './fanout.js';
-import { createFanoutEngine } from './fanout.js';
+import { FanoutEngine } from './fanout.js';
 import type { HandlersState, ShutdownConfig } from './shutdown.js';
-import { createShutdownManager } from './shutdown.js';
+import { ShutdownManager } from './shutdown.js';
 
 /**
  * Configuration for Matador.
@@ -63,6 +63,12 @@ export interface MatadorConfig {
  * - Shutdown: Graceful termination
  */
 export class Matador {
+  /**
+   * Creates a new Matador instance.
+   */
+  static create(config: MatadorConfig): Matador {
+    return new Matador(config);
+  }
   private readonly transport: Transport;
   private readonly topology: Topology;
   private readonly schema;
@@ -82,13 +88,13 @@ export class Matador {
     this.consumeFrom = config.consumeFrom ?? [];
 
     // Initialize components
-    this.schema = createSchemaRegistry();
-    this.codec = config.codec ?? createJsonCodec();
-    this.retryPolicy = config.retryPolicy ?? createRetryPolicy();
-    this.hooks = createSafeHooks(config.hooks);
+    this.schema = SchemaRegistry.create();
+    this.codec = config.codec ?? JsonCodec.create();
+    this.retryPolicy = config.retryPolicy ?? StandardRetryPolicy.create();
+    this.hooks = SafeHooks.create(config.hooks);
 
     // Create pipeline
-    this.pipeline = createPipeline({
+    this.pipeline = ProcessingPipeline.create({
       transport: this.transport,
       schema: this.schema,
       codec: this.codec,
@@ -98,7 +104,7 @@ export class Matador {
 
     // Create fanout engine
     const defaultQueue = this.topology.queues[0]?.name ?? 'default';
-    this.fanout = createFanoutEngine({
+    this.fanout = FanoutEngine.create({
       transport: this.transport,
       schema: this.schema,
       hooks: this.hooks,
@@ -107,7 +113,7 @@ export class Matador {
     });
 
     // Create shutdown manager
-    this.shutdownManager = createShutdownManager(
+    this.shutdownManager = ShutdownManager.create(
       () => this.fanout.eventsBeingEnqueuedCount,
       () => this.stopReceiving(),
       () => this.transport.disconnect(),
@@ -292,9 +298,3 @@ export class Matador {
   }
 }
 
-/**
- * Creates a new Matador instance.
- */
-export function createMatador(config: MatadorConfig): Matador {
-  return new Matador(config);
-}

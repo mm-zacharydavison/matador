@@ -12,4 +12,4 @@ export type {
 } from './types.js';
 
 export { consoleLogger } from './types.js';
-export { createSafeHooks, SafeHooks } from './safe-hooks.js';
+export { SafeHooks } from './safe-hooks.js';
