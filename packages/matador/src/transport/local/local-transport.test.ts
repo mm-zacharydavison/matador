@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import type { Topology } from '../../topology/types.js';
 import { createEnvelope } from '../../types/index.js';
-import { MemoryTransport } from './memory-transport.js';
+import { LocalTransport } from './local-transport.js';
 
-describe('MemoryTransport', () => {
-  let transport: MemoryTransport;
+describe('LocalTransport', () => {
+  let transport: LocalTransport;
 
   beforeEach(() => {
-    transport = new MemoryTransport();
+    transport = new LocalTransport();
   });
 
   describe('connection', () => {
@@ -29,7 +29,7 @@ describe('MemoryTransport', () => {
 
   describe('capabilities', () => {
     it('should report correct capabilities', () => {
-      expect(transport.name).toBe('memory');
+      expect(transport.name).toBe('local');
       expect(transport.capabilities.deliveryModes).toContain('at-least-once');
       expect(transport.capabilities.delayedMessages).toBe(true);
       expect(transport.capabilities.deadLetterRouting).toBe('manual');

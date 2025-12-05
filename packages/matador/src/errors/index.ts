@@ -34,7 +34,7 @@ export {
   NoSubscribersExistError,
   InvalidSchemaError,
   SubscriberIsStubError,
-  MemoryTransportCannotProcessStubError,
+  LocalTransportCannotProcessStubError,
   // Queue errors
   QueueNotFoundError,
   // Event validation errors

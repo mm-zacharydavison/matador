@@ -77,7 +77,7 @@ export {
   createRabbitMQTransport,
   defaultConnectionConfig,
   hasNativeDeadLetter,
-  MemoryTransport,
+  LocalTransport,
   RabbitMQTransport,
   supportsDeliveryMode,
   supportsDelayedMessages,
@@ -185,7 +185,7 @@ export {
   NoSubscribersExistError,
   InvalidSchemaError,
   SubscriberIsStubError,
-  MemoryTransportCannotProcessStubError,
+  LocalTransportCannotProcessStubError,
   // Queue errors
   QueueNotFoundError,
   // Event validation errors

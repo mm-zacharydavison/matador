@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { TransportFallbackContext } from '../../hooks/index.js';
 import type { Topology } from '../../topology/types.js';
 import { createEnvelope } from '../../types/index.js';
-import { MemoryTransport } from '../memory/memory-transport.js';
+import { LocalTransport } from '../local/local-transport.js';
 import { FallbackTransport } from './fallback-transport.js';
 
 describe('FallbackTransport', () => {
-  let primary: MemoryTransport;
-  let fallback: MemoryTransport;
+  let primary: LocalTransport;
+  let fallback: LocalTransport;
   let transport: FallbackTransport;
 
   beforeEach(() => {
-    primary = new MemoryTransport();
-    fallback = new MemoryTransport();
+    primary = new LocalTransport();
+    fallback = new LocalTransport();
     transport = new FallbackTransport({
       transports: [primary, fallback],
     });
@@ -26,7 +26,7 @@ describe('FallbackTransport', () => {
     });
 
     it('should set name based on transport names', () => {
-      expect(transport.name).toBe('fallback(memory,memory)');
+      expect(transport.name).toBe('fallback(local,local)');
     });
 
     it('should use primary transport capabilities', () => {
@@ -145,8 +145,8 @@ describe('FallbackTransport', () => {
 
       expect(fallbackContexts).toHaveLength(1);
       const ctx = fallbackContexts[0]!;
-      expect(ctx.failedTransport).toBe('memory');
-      expect(ctx.successTransport).toBe('memory');
+      expect(ctx.failedTransport).toBe('local');
+      expect(ctx.successTransport).toBe('local');
       expect(ctx.queue).toBe('test-queue');
       expect(ctx.envelope).toBe(envelope);
       expect(ctx.error.message).toContain('is not connected');
@@ -163,7 +163,7 @@ describe('FallbackTransport', () => {
     });
 
     it('should try transports in order', async () => {
-      const third = new MemoryTransport();
+      const third = new LocalTransport();
       const multiTransport = new FallbackTransport({
         transports: [primary, fallback, third],
       });

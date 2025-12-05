@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createTopology } from '../topology/builder.js';
-import { MemoryTransport } from '../transport/memory/memory-transport.js';
+import { LocalTransport } from '../transport/local/local-transport.js';
 import { BaseEvent, createSubscriber } from '../types/index.js';
 import { Matador, createMatador } from './matador.js';
 
@@ -15,11 +15,11 @@ class OrderPlacedEvent extends BaseEvent<{ orderId: string; amount: number }> {
 }
 
 describe('Matador', () => {
-  let transport: MemoryTransport;
+  let transport: LocalTransport;
   let matador: Matador;
 
   beforeEach(() => {
-    transport = new MemoryTransport();
+    transport = new LocalTransport();
   });
 
   afterEach(async () => {

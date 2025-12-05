@@ -13,7 +13,7 @@ import {
 } from '@testcontainers/rabbitmq';
 import type { Topology } from '../../src/topology/types.js';
 import type { Subscription, Transport } from '../../src/transport/index.js';
-import { MemoryTransport } from '../../src/transport/memory/memory-transport.js';
+import { LocalTransport } from '../../src/transport/local/local-transport.js';
 import {
   RabbitMQTransport,
   createRabbitMQTransport,
@@ -106,9 +106,9 @@ type TransportFactory = {
 
 const transportFactories: TransportFactory[] = [
   {
-    name: 'MemoryTransport',
-    create: () => new MemoryTransport(),
-    cleanup: (transport) => (transport as MemoryTransport).clear(),
+    name: 'LocalTransport',
+    create: () => new LocalTransport(),
+    cleanup: (transport) => (transport as LocalTransport).clear(),
     skip: false,
   },
   {

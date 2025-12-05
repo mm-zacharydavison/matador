@@ -30,7 +30,7 @@ export {
   defaultConnectionConfig,
 } from './connection-manager.js';
 
-export { MemoryTransport } from './memory/memory-transport.js';
+export { LocalTransport } from './local/local-transport.js';
 
 export type { FallbackTransportConfig } from './fallback/fallback-transport.js';
 export { FallbackTransport } from './fallback/fallback-transport.js';

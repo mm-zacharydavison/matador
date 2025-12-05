@@ -14,7 +14,7 @@ import {
 import type { TransportFallbackContext } from '../../src/hooks/index.js';
 import { FallbackTransport } from '../../src/transport/fallback/fallback-transport.js';
 import type { Subscription } from '../../src/transport/index.js';
-import { MemoryTransport } from '../../src/transport/memory/memory-transport.js';
+import { LocalTransport } from '../../src/transport/local/local-transport.js';
 import {
   type RabbitMQTransport,
   createRabbitMQTransport,
@@ -48,7 +48,7 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
 
   describe('fallback to local transport when RabbitMQ fails', () => {
     let rabbitTransport: RabbitMQTransport;
-    let memoryTransport: MemoryTransport;
+    let localTransport: LocalTransport;
     let fallbackTransport: FallbackTransport;
     let subscriptions: Subscription[];
     let fallbackEvents: TransportFallbackContext[];
@@ -62,10 +62,10 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
         quorumQueues: false,
       });
 
-      memoryTransport = new MemoryTransport();
+      localTransport = new LocalTransport();
 
       fallbackTransport = new FallbackTransport({
-        transports: [rabbitTransport, memoryTransport],
+        transports: [rabbitTransport, localTransport],
         onFallback: (ctx) => fallbackEvents.push(ctx),
       });
 
@@ -140,7 +140,7 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
       // Verify fallback was triggered
       expect(fallbackEvents).toHaveLength(1);
       expect(fallbackEvents[0]!.failedTransport).toBe('rabbitmq');
-      expect(fallbackEvents[0]!.successTransport).toBe('memory');
+      expect(fallbackEvents[0]!.successTransport).toBe('local');
       expect(fallbackEvents[0]!.queue).toBe(queueName);
     });
 

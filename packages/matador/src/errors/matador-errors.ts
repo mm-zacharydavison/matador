@@ -130,7 +130,7 @@ export class AllTransportsFailedError extends MatadorError {
     'ACTION: Check the health of all configured transports (primary and fallbacks). ' +
     'Review the errors array for specific failure reasons. ' +
     'Ensure at least one transport is properly configured and reachable. ' +
-    'Consider adding a MemoryTransport as a last-resort fallback.';
+    'Consider adding a LocalTransport as a last-resort fallback.';
 
   constructor(
     public readonly queue: string,
@@ -297,18 +297,18 @@ export class SubscriberIsStubError extends MatadorError {
 }
 
 /**
- * Thrown when a MemoryTransport tries to process a stub subscriber.
+ * Thrown when a LocalTransport tries to process a stub subscriber.
  */
-export class MemoryTransportCannotProcessStubError extends MatadorError {
+export class LocalTransportCannotProcessStubError extends MatadorError {
   readonly description =
-    'The MemoryTransport cannot process events for SubscriberStubs. ' +
+    'The LocalTransport cannot process events for SubscriberStubs. ' +
     'ACTION: SubscriberStubs represent remote implementations that only RabbitMQ can route. ' +
-    'If using MemoryTransport for testing, provide mock implementations instead of stubs. ' +
+    'If using LocalTransport for testing, provide mock implementations instead of stubs. ' +
     'For production fallback scenarios, be aware that stub-targeted events will be dropped.';
 
   constructor(public readonly subscriberName: string) {
     super(
-      `MemoryTransport cannot process stub subscriber "${subscriberName}". ` +
+      `LocalTransport cannot process stub subscriber "${subscriberName}". ` +
         `Stub subscribers require a distributed transport like RabbitMQ.`,
     );
   }

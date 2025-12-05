@@ -23,7 +23,7 @@ import {
   type EventClass,
   type EventOptions,
   type MatadorHooks,
-  MemoryTransport,
+  LocalTransport,
   type Topology,
   consoleLogger,
   createMatador,
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
       .build();
 
   // Create transport
-  const transport = new MemoryTransport();
+  const transport = new LocalTransport();
 
   // Create hooks for logging
   const hooks: MatadorHooks = {

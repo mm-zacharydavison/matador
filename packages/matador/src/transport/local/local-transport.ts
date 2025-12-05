@@ -13,9 +13,9 @@ import type {
 } from '../transport.js';
 
 /**
- * Capabilities of the MemoryTransport.
+ * Capabilities of the LocalTransport.
  */
-const memoryCapabilities: TransportCapabilities = {
+const localCapabilities: TransportCapabilities = {
   deliveryModes: ['at-least-once', 'at-most-once'],
   delayedMessages: true, // Implemented with setTimeout
   deadLetterRouting: 'manual',
@@ -26,7 +26,7 @@ const memoryCapabilities: TransportCapabilities = {
 };
 
 /**
- * Internal message structure for the memory queue.
+ * Internal message structure for the local queue.
  */
 interface QueuedMessage {
   readonly envelope: Envelope;
@@ -44,12 +44,12 @@ interface ActiveSubscription {
 }
 
 /**
- * In-memory transport for testing.
+ * Local in-memory transport for testing and fallback.
  * Messages are stored in memory and delivered synchronously.
  */
-export class MemoryTransport implements Transport {
-  readonly name = 'memory';
-  readonly capabilities = memoryCapabilities;
+export class LocalTransport implements Transport {
+  readonly name = 'local';
+  readonly capabilities = localCapabilities;
 
   private connected = false;
   private readonly queues = new Map<string, QueuedMessage[]>();
@@ -94,7 +94,7 @@ export class MemoryTransport implements Transport {
     }
 
     // Initialize queues for the topology.
-    // Note: Retry queues are not pre-created here because MemoryTransport handles
+    // Note: Retry queues are not pre-created here because LocalTransport handles
     // retries by re-enqueueing messages with a delay to the original queue, matching
     // how the pipeline schedules retries via transport.send() with a delay option.
     for (const queueDef of topology.queues) {

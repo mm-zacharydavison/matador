@@ -4,7 +4,7 @@ import {
   DoRetry,
   DontRetry,
   type Matador,
-  MemoryTransport,
+  LocalTransport,
   createMatador,
   createSubscriber,
   createTopology,
@@ -34,11 +34,11 @@ class PaymentProcessedEvent extends BaseEvent<{
 }
 
 describe('Matador Integration Tests', () => {
-  let transport: MemoryTransport;
+  let transport: LocalTransport;
   let matador: Matador;
 
   beforeEach(() => {
-    transport = new MemoryTransport();
+    transport = new LocalTransport();
   });
 
   afterEach(async () => {
