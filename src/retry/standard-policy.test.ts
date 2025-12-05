@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'bun:test';
-import { StandardRetryPolicy, createRetryPolicy } from './standard-policy.js';
 import {
   DoRetry,
   DontRetry,
   EventAssertionError,
 } from '../errors/retry-errors.js';
-import type { RetryContext, RetryDecision } from './policy.js';
 import type { MessageReceipt } from '../transport/transport.js';
-import type { SubscriberDefinition } from '../types/subscriber.js';
 import { createEnvelope } from '../types/envelope.js';
+import type { SubscriberDefinition } from '../types/subscriber.js';
+import type { RetryContext, RetryDecision } from './policy.js';
+import { StandardRetryPolicy, createRetryPolicy } from './standard-policy.js';
 
 describe('StandardRetryPolicy', () => {
   describe('shouldRetry', () => {
@@ -125,9 +125,15 @@ describe('StandardRetryPolicy', () => {
         backoffMultiplier: 2,
       });
 
-      const delay1 = policy.getDelay(createContext(new Error(), { attemptNumber: 1 }));
-      const delay2 = policy.getDelay(createContext(new Error(), { attemptNumber: 2 }));
-      const delay3 = policy.getDelay(createContext(new Error(), { attemptNumber: 3 }));
+      const delay1 = policy.getDelay(
+        createContext(new Error(), { attemptNumber: 1 }),
+      );
+      const delay2 = policy.getDelay(
+        createContext(new Error(), { attemptNumber: 2 }),
+      );
+      const delay3 = policy.getDelay(
+        createContext(new Error(), { attemptNumber: 3 }),
+      );
 
       expect(delay1).toBe(1000); // 1000 * 2^0
       expect(delay2).toBe(2000); // 1000 * 2^1
@@ -141,7 +147,9 @@ describe('StandardRetryPolicy', () => {
         maxDelay: 5000,
       });
 
-      const delay = policy.getDelay(createContext(new Error(), { attemptNumber: 5 }));
+      const delay = policy.getDelay(
+        createContext(new Error(), { attemptNumber: 5 }),
+      );
 
       expect(delay).toBe(5000);
     });
@@ -186,7 +194,11 @@ describe('StandardRetryPolicy', () => {
 
 function assertDeadLetter(
   decision: RetryDecision,
-): asserts decision is { action: 'dead-letter'; queue: string; reason: string } {
+): asserts decision is {
+  action: 'dead-letter';
+  queue: string;
+  reason: string;
+} {
   if (decision.action !== 'dead-letter') {
     throw new Error(`Expected dead-letter action, got ${decision.action}`);
   }

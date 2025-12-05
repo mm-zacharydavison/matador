@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
-import { MemoryTransport } from './memory-transport.js';
-import { createEnvelope } from '../../types/index.js';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import type { Topology } from '../../topology/types.js';
+import { createEnvelope } from '../../types/index.js';
+import { MemoryTransport } from './memory-transport.js';
 
 describe('MemoryTransport', () => {
   let transport: MemoryTransport;
@@ -97,9 +97,9 @@ describe('MemoryTransport', () => {
     it('should throw when subscribing while disconnected', async () => {
       await transport.disconnect();
 
-      expect(
-        transport.subscribe('test-queue', async () => {}),
-      ).rejects.toThrow('Transport not connected');
+      expect(transport.subscribe('test-queue', async () => {})).rejects.toThrow(
+        'Transport not connected',
+      );
     });
 
     it('should deliver messages to subscribers', async () => {
@@ -215,23 +215,39 @@ describe('MemoryTransport', () => {
       await transport.connect();
     });
 
-    it('should delay message delivery', async () => {
+    it('should return immediately and delay message delivery', async () => {
       const envelope = createTestEnvelope();
-      const startTime = Date.now();
 
-      const sendPromise = transport.send('test-queue', envelope, {
+      // Send returns immediately (non-blocking)
+      await transport.send('test-queue', envelope, {
         delay: 100,
       });
 
       // Message should not be in queue immediately
       expect(transport.getQueueSize('test-queue')).toBe(0);
 
-      await sendPromise;
-      const elapsed = Date.now() - startTime;
+      // Wait for the delay to pass
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // Should have waited approximately 100ms
-      expect(elapsed).toBeGreaterThanOrEqual(90);
+      // Message should now be in queue
       expect(transport.getQueueSize('test-queue')).toBe(1);
+    });
+
+    it('should cancel delayed messages on disconnect', async () => {
+      const envelope = createTestEnvelope();
+
+      await transport.send('test-queue', envelope, {
+        delay: 100,
+      });
+
+      // Disconnect before delay expires
+      await transport.disconnect();
+
+      // Wait past the original delay
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Message should never have been delivered
+      expect(transport.getQueueSize('test-queue')).toBe(0);
     });
   });
 });

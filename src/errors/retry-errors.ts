@@ -3,7 +3,10 @@ import type { HasDescription } from './has-description.js';
 /**
  * Base class for retry control errors.
  */
-export abstract class RetryControlError extends Error implements HasDescription {
+export abstract class RetryControlError
+  extends Error
+  implements HasDescription
+{
   abstract readonly description: string;
 
   constructor(message: string) {

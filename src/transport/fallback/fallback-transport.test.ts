@@ -1,0 +1,271 @@
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import type { TransportFallbackContext } from '../../hooks/index.js';
+import type { Topology } from '../../topology/types.js';
+import { createEnvelope } from '../../types/index.js';
+import { MemoryTransport } from '../memory/memory-transport.js';
+import { FallbackTransport } from './fallback-transport.js';
+
+describe('FallbackTransport', () => {
+  let primary: MemoryTransport;
+  let fallback: MemoryTransport;
+  let transport: FallbackTransport;
+
+  beforeEach(() => {
+    primary = new MemoryTransport();
+    fallback = new MemoryTransport();
+    transport = new FallbackTransport({
+      transports: [primary, fallback],
+    });
+  });
+
+  describe('constructor', () => {
+    it('should throw if no transports provided', () => {
+      expect(() => new FallbackTransport({ transports: [] })).toThrow(
+        'At least one transport is required',
+      );
+    });
+
+    it('should set name based on transport names', () => {
+      expect(transport.name).toBe('fallback(memory,memory)');
+    });
+
+    it('should use primary transport capabilities', () => {
+      expect(transport.capabilities).toBe(primary.capabilities);
+    });
+
+    it('should expose primary transport', () => {
+      expect(transport.primary).toBe(primary);
+    });
+  });
+
+  describe('connection', () => {
+    it('should start disconnected', () => {
+      expect(transport.isConnected()).toBe(false);
+    });
+
+    it('should connect all transports', async () => {
+      await transport.connect();
+
+      expect(transport.isConnected()).toBe(true);
+      expect(primary.isConnected()).toBe(true);
+      expect(fallback.isConnected()).toBe(true);
+    });
+
+    it('should disconnect all transports', async () => {
+      await transport.connect();
+      await transport.disconnect();
+
+      expect(transport.isConnected()).toBe(false);
+      expect(primary.isConnected()).toBe(false);
+      expect(fallback.isConnected()).toBe(false);
+    });
+  });
+
+  describe('topology', () => {
+    it('should apply topology to all transports', async () => {
+      const topology: Topology = {
+        namespace: 'test',
+        queues: [{ name: 'events' }],
+        deadLetter: {
+          unhandled: { enabled: true },
+          undeliverable: { enabled: true },
+        },
+        retry: {
+          enabled: true,
+          defaultDelayMs: 1000,
+          maxDelayMs: 30000,
+        },
+      };
+
+      await transport.connect();
+      await transport.applyTopology(topology);
+
+      // Both transports should have the queue
+      expect(primary.getQueueSize('test.events')).toBe(0);
+      expect(fallback.getQueueSize('test.events')).toBe(0);
+    });
+  });
+
+  describe('send - primary success', () => {
+    beforeEach(async () => {
+      await transport.connect();
+    });
+
+    it('should send to primary transport when it succeeds', async () => {
+      const envelope = createTestEnvelope();
+      await transport.send('test-queue', envelope);
+
+      expect(primary.getQueueSize('test-queue')).toBe(1);
+      expect(fallback.getQueueSize('test-queue')).toBe(0);
+    });
+
+    it('should not call onFallback when primary succeeds', async () => {
+      const onFallback = mock(() => {});
+      const transportWithCallback = new FallbackTransport({
+        transports: [primary, fallback],
+        onFallback,
+      });
+      await transportWithCallback.connect();
+
+      const envelope = createTestEnvelope();
+      await transportWithCallback.send('test-queue', envelope);
+
+      expect(onFallback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('send - fallback', () => {
+    beforeEach(async () => {
+      await transport.connect();
+    });
+
+    it('should fallback when primary fails', async () => {
+      // Make primary fail
+      await primary.disconnect();
+
+      const envelope = createTestEnvelope();
+      await transport.send('test-queue', envelope);
+
+      expect(fallback.getQueueSize('test-queue')).toBe(1);
+    });
+
+    it('should call onFallback when fallback is used', async () => {
+      const fallbackContexts: TransportFallbackContext[] = [];
+      const transportWithCallback = new FallbackTransport({
+        transports: [primary, fallback],
+        onFallback: (ctx) => fallbackContexts.push(ctx),
+      });
+      await transportWithCallback.connect();
+
+      // Make primary fail
+      await primary.disconnect();
+
+      const envelope = createTestEnvelope();
+      await transportWithCallback.send('test-queue', envelope);
+
+      expect(fallbackContexts).toHaveLength(1);
+      const ctx = fallbackContexts[0]!;
+      expect(ctx.failedTransport).toBe('memory');
+      expect(ctx.successTransport).toBe('memory');
+      expect(ctx.queue).toBe('test-queue');
+      expect(ctx.envelope).toBe(envelope);
+      expect(ctx.error.message).toBe('Transport not connected');
+    });
+
+    it('should throw when all transports fail', async () => {
+      await primary.disconnect();
+      await fallback.disconnect();
+
+      const envelope = createTestEnvelope();
+      await expect(transport.send('test-queue', envelope)).rejects.toThrow(
+        'Transport not connected',
+      );
+    });
+
+    it('should try transports in order', async () => {
+      const third = new MemoryTransport();
+      const multiTransport = new FallbackTransport({
+        transports: [primary, fallback, third],
+      });
+      await multiTransport.connect();
+
+      // Make primary and fallback fail
+      await primary.disconnect();
+      await fallback.disconnect();
+
+      const envelope = createTestEnvelope();
+      await multiTransport.send('test-queue', envelope);
+
+      expect(third.getQueueSize('test-queue')).toBe(1);
+    });
+  });
+
+  describe('subscribe', () => {
+    beforeEach(async () => {
+      await transport.connect();
+    });
+
+    it('should receive messages from primary transport', async () => {
+      const receivedMessages: unknown[] = [];
+
+      await transport.subscribe('test-queue', async (envelope) => {
+        receivedMessages.push(envelope);
+      });
+
+      // Send directly to primary (simulating normal operation)
+      await primary.send('test-queue', createTestEnvelope());
+
+      expect(receivedMessages).toHaveLength(1);
+    });
+
+    it('should receive messages that fell back to fallback transport', async () => {
+      const receivedMessages: unknown[] = [];
+
+      // Subscribe through FallbackTransport
+      await transport.subscribe('test-queue', async (envelope) => {
+        receivedMessages.push(envelope);
+      });
+
+      // Make primary fail for sends
+      await primary.disconnect();
+
+      // Send through FallbackTransport - should fall back to memory
+      const envelope = createTestEnvelope();
+      await transport.send('test-queue', envelope);
+
+      // Message went to fallback transport, subscriber should still receive it
+      expect(receivedMessages).toHaveLength(1);
+      expect((receivedMessages[0] as { id: string }).id).toBe(envelope.id);
+    });
+  });
+
+  describe('complete', () => {
+    beforeEach(async () => {
+      await transport.connect();
+    });
+
+    it('should complete using primary transport', async () => {
+      await primary.send('test-queue', createTestEnvelope());
+
+      const received = await primary.receiveOne('test-queue');
+      expect(received).not.toBeNull();
+
+      await transport.complete(received!.receipt);
+
+      expect(primary.getCompleted()).toHaveLength(1);
+    });
+  });
+
+  describe('sendToDeadLetter', () => {
+    beforeEach(async () => {
+      await transport.connect();
+    });
+
+    it('should send to dead letter using primary transport', async () => {
+      const envelope = createTestEnvelope();
+      await primary.send('test-queue', envelope);
+
+      const received = await primary.receiveOne('test-queue');
+      expect(received).not.toBeNull();
+
+      await transport.sendToDeadLetter(
+        received!.receipt,
+        'dlq',
+        envelope,
+        'test error',
+      );
+
+      expect(primary.getQueueSize('test-queue')).toBe(0);
+      expect(primary.getQueueSize('test-queue.dlq')).toBe(1);
+    });
+  });
+});
+
+function createTestEnvelope() {
+  return createEnvelope({
+    eventKey: 'test.event',
+    targetSubscriber: 'test-subscriber',
+    data: { test: 'data' },
+    importance: 'should-investigate',
+  });
+}

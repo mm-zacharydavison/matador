@@ -1,8 +1,25 @@
-import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test';
-import { RabbitMQContainer, type StartedRabbitMQContainer } from '@testcontainers/rabbitmq';
-import { RabbitMQTransport, createRabbitMQTransport } from '../../src/transport/rabbitmq/rabbitmq-transport.js';
-import { createTestTopology, createTestEnvelope } from './transport-compliance.test.js';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'bun:test';
+import {
+  RabbitMQContainer,
+  type StartedRabbitMQContainer,
+} from '@testcontainers/rabbitmq';
 import type { Subscription } from '../../src/transport/index.js';
+import {
+  type RabbitMQTransport,
+  createRabbitMQTransport,
+} from '../../src/transport/rabbitmq/rabbitmq-transport.js';
+import {
+  createTestEnvelope,
+  createTestTopology,
+} from './transport-compliance.e2e.test.js';
 
 // Skip tests if docker is not available
 const SKIP_E2E = process.env.SKIP_E2E_TESTS === 'true';
@@ -75,7 +92,9 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
       const subscription = await transport.subscribe(
         queueName,
         async (env, receipt) => {
-          receivedOrder.push((env.payload.data as { priority: number }).priority);
+          receivedOrder.push(
+            (env.payload.data as { priority: number }).priority,
+          );
           await transport.complete(receipt);
         },
       );
@@ -209,7 +228,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
 
   describe('channel per queue isolation', () => {
     let transport: RabbitMQTransport;
-    let subscriptions: Subscription[] = [];
+    const subscriptions: Subscription[] = [];
 
     beforeEach(async () => {
       transport = createRabbitMQTransport({
@@ -248,7 +267,10 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
         queue1,
         async (env, receipt) => {
           queue1Processing.add(env.id);
-          queue1MaxConcurrent = Math.max(queue1MaxConcurrent, queue1Processing.size);
+          queue1MaxConcurrent = Math.max(
+            queue1MaxConcurrent,
+            queue1Processing.size,
+          );
           await new Promise((resolve) => setTimeout(resolve, 50));
           queue1Processing.delete(env.id);
           await transport.complete(receipt);
@@ -261,7 +283,10 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
         queue2,
         async (env, receipt) => {
           queue2Processing.add(env.id);
-          queue2MaxConcurrent = Math.max(queue2MaxConcurrent, queue2Processing.size);
+          queue2MaxConcurrent = Math.max(
+            queue2MaxConcurrent,
+            queue2Processing.size,
+          );
           await new Promise((resolve) => setTimeout(resolve, 50));
           queue2Processing.delete(env.id);
           await transport.complete(receipt);

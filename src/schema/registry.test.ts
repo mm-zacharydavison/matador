@@ -1,6 +1,6 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
-import { SchemaRegistry, SchemaError } from './registry.js';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { BaseEvent, createSubscriber } from '../types/index.js';
+import { SchemaError, SchemaRegistry } from './registry.js';
 
 class TestEvent extends BaseEvent<{ id: string }> {
   static readonly key = 'test.event';
@@ -82,7 +82,11 @@ describe('SchemaRegistry', () => {
       }
 
       const sub1 = createSubscriber('sub-1', AliasedEvent, async () => {});
-      const sub2 = createSubscriber('sub-2', EventWithSameAlias, async () => {});
+      const sub2 = createSubscriber(
+        'sub-2',
+        EventWithSameAlias,
+        async () => {},
+      );
 
       registry.register(AliasedEvent, [sub1]);
 
@@ -171,7 +175,10 @@ describe('SchemaRegistry', () => {
 
       registry.register(TestEvent, [sub]);
 
-      const definition = registry.getSubscriberDefinition('test.event', 'sub-1');
+      const definition = registry.getSubscriberDefinition(
+        'test.event',
+        'sub-1',
+      );
       expect(definition).toEqual({
         name: 'sub-1',
         idempotent: 'yes',
@@ -194,7 +201,10 @@ describe('SchemaRegistry', () => {
 
       registry.register(TestEvent, [sub]);
 
-      const executable = registry.getExecutableSubscriber('test.event', 'sub-1');
+      const executable = registry.getExecutableSubscriber(
+        'test.event',
+        'sub-1',
+      );
       expect(executable).toBeDefined();
       expect(executable?.callback).toBe(callback);
     });
@@ -226,8 +236,16 @@ describe('SchemaRegistry', () => {
     });
 
     it('should detect duplicate subscriber names', () => {
-      const sub1 = createSubscriber('duplicate-name', TestEvent, async () => {});
-      const sub2 = createSubscriber('duplicate-name', TestEvent, async () => {});
+      const sub1 = createSubscriber(
+        'duplicate-name',
+        TestEvent,
+        async () => {},
+      );
+      const sub2 = createSubscriber(
+        'duplicate-name',
+        TestEvent,
+        async () => {},
+      );
 
       registry.register(TestEvent, [sub1, sub2]);
 

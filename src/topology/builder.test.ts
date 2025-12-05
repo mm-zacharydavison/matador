@@ -19,7 +19,9 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject namespace starting with number', () => {
-      const builder = createTopology().withNamespace('123app').addQueue('events');
+      const builder = createTopology()
+        .withNamespace('123app')
+        .addQueue('events');
 
       expect(() => builder.build()).toThrow(TopologyValidationError);
     });
@@ -87,7 +89,9 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject queue names starting with number', () => {
-      const builder = createTopology().withNamespace('test').addQueue('123queue');
+      const builder = createTopology()
+        .withNamespace('test')
+        .addQueue('123queue');
 
       expect(() => builder.build()).toThrow('must start with a letter');
     });
@@ -105,7 +109,9 @@ describe('TopologyBuilder', () => {
         .withNamespace('test')
         .addQueue('events', { consumerTimeout: -1 });
 
-      expect(() => builder.build()).toThrow('consumer timeout must be non-negative');
+      expect(() => builder.build()).toThrow(
+        'consumer timeout must be non-negative',
+      );
     });
   });
 
@@ -214,9 +220,7 @@ describe('TopologyBuilder', () => {
     });
 
     it('should return empty array for valid topology', () => {
-      const builder = createTopology()
-        .withNamespace('test')
-        .addQueue('events');
+      const builder = createTopology().withNamespace('test').addQueue('events');
 
       const issues = builder.validate();
       expect(issues).toHaveLength(0);

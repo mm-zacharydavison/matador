@@ -41,6 +41,22 @@ export interface EnqueueWarningContext {
 }
 
 /**
+ * Context for transport fallback hook.
+ */
+export interface TransportFallbackContext {
+  /** The envelope that was being sent */
+  readonly envelope: Envelope;
+  /** The queue the message was being sent to */
+  readonly queue: string;
+  /** The transport that failed */
+  readonly failedTransport: string;
+  /** The transport that succeeded */
+  readonly successTransport: string;
+  /** The error from the failed transport */
+  readonly error: Error;
+}
+
+/**
  * Context for enqueue error hook.
  */
 export interface EnqueueErrorContext {
@@ -102,6 +118,12 @@ export interface MatadorHooks {
    * Called when enqueue falls back to a secondary queue.
    */
   onEnqueueWarning?(context: EnqueueWarningContext): void | Promise<void>;
+
+  /**
+   * Called when transport fallback occurs during send.
+   * Only fires when using FallbackTransport.
+   */
+  onTransportFallback?(context: TransportFallbackContext): void | Promise<void>;
 
   /**
    * Called when enqueue fails completely.

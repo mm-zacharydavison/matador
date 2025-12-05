@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
-import { Matador, createMatador } from './matador.js';
-import { MemoryTransport } from '../transport/memory/memory-transport.js';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createTopology } from '../topology/builder.js';
+import { MemoryTransport } from '../transport/memory/memory-transport.js';
 import { BaseEvent, createSubscriber } from '../types/index.js';
+import { Matador, createMatador } from './matador.js';
 
 class UserCreatedEvent extends BaseEvent<{ userId: string; email: string }> {
   static readonly key = 'user.created';
@@ -55,9 +55,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       expect(matador).toBeInstanceOf(Matador);
     });
@@ -100,9 +101,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 
@@ -121,9 +123,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 
@@ -137,13 +140,21 @@ describe('Matador', () => {
         .build();
 
       // Register duplicate subscriber names
-      const sub1 = createSubscriber('same-name', UserCreatedEvent, async () => {});
-      const sub2 = createSubscriber('same-name', UserCreatedEvent, async () => {});
+      const sub1 = createSubscriber(
+        'same-name',
+        UserCreatedEvent,
+        async () => {},
+      );
+      const sub2 = createSubscriber(
+        'same-name',
+        UserCreatedEvent,
+        async () => {},
+      );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        sub1,
-        sub2,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [sub1, sub2],
+      );
 
       expect(matador.start()).rejects.toThrow('Schema validation failed');
     });
@@ -162,9 +173,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       const event = new UserCreatedEvent({
         userId: '123',
@@ -186,9 +198,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 
@@ -213,11 +226,10 @@ describe('Matador', () => {
       const sub2 = createSubscriber('sub-2', UserCreatedEvent, async () => {});
       const sub3 = createSubscriber('sub-3', UserCreatedEvent, async () => {});
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        sub1,
-        sub2,
-        sub3,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [sub1, sub2, sub3],
+      );
 
       await matador.start();
 
@@ -243,9 +255,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 
@@ -275,9 +288,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
       await matador.shutdown();
@@ -297,9 +311,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
       await matador.shutdown();
@@ -320,9 +335,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 
@@ -354,9 +370,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 
@@ -375,9 +392,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 
@@ -400,9 +418,10 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = createMatador({ transport, topology }).register(UserCreatedEvent, [
-        subscriber,
-      ]);
+      matador = createMatador({ transport, topology }).register(
+        UserCreatedEvent,
+        [subscriber],
+      );
 
       await matador.start();
 

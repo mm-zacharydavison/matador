@@ -1,7 +1,6 @@
 import type { ConnectionState } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
 import {
-  consoleLogger,
   type DecodeErrorContext,
   type EnqueueErrorContext,
   type EnqueueSuccessContext,
@@ -11,6 +10,7 @@ import {
   type WorkerErrorContext,
   type WorkerExecuteFn,
   type WorkerSuccessContext,
+  consoleLogger,
 } from './types.js';
 
 /**
@@ -55,7 +55,10 @@ export class SafeHooks {
       try {
         await this.hooks.onWorkerWrap(envelope, subscriber, execute);
       } catch (error) {
-        this.logger.warn('[Matador] 🟡 Hook onWorkerWrap threw an error', error);
+        this.logger.warn(
+          '[Matador] 🟡 Hook onWorkerWrap threw an error',
+          error,
+        );
         // Still try to execute if wrap failed
         await execute();
       }
@@ -106,7 +109,10 @@ export class SafeHooks {
       const result = await this.hooks.loadUniversalMetadata();
       return result ?? {};
     } catch (error) {
-      this.logger.warn('[Matador] 🟡 Hook loadUniversalMetadata threw an error', error);
+      this.logger.warn(
+        '[Matador] 🟡 Hook loadUniversalMetadata threw an error',
+        error,
+      );
       return {};
     }
   }
@@ -119,7 +125,10 @@ export class SafeHooks {
     try {
       return this.hooks.getQueueConcurrency(queueName);
     } catch (error) {
-      this.logger.warn('[Matador] 🟡 Hook getQueueConcurrency threw an error', error);
+      this.logger.warn(
+        '[Matador] 🟡 Hook getQueueConcurrency threw an error',
+        error,
+      );
       return undefined;
     }
   }
@@ -158,7 +167,10 @@ export class SafeHooks {
     try {
       return this.hooks.getMaxDeliveries(envelope);
     } catch (error) {
-      this.logger.warn('[Matador] 🟡 Hook getMaxDeliveries threw an error', error);
+      this.logger.warn(
+        '[Matador] 🟡 Hook getMaxDeliveries threw an error',
+        error,
+      );
       return undefined;
     }
   }

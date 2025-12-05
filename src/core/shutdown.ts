@@ -1,4 +1,4 @@
-import { consoleLogger, type Logger } from '../hooks/index.js';
+import { type Logger, consoleLogger } from '../hooks/index.js';
 
 /**
  * Shutdown state.

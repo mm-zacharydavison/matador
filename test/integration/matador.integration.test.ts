@@ -1,13 +1,13 @@
-import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import {
-  Matador,
-  createMatador,
   BaseEvent,
+  DoRetry,
+  DontRetry,
+  type Matador,
+  MemoryTransport,
+  createMatador,
   createSubscriber,
   createTopology,
-  MemoryTransport,
-  DontRetry,
-  DoRetry,
 } from '../../src/index.js';
 
 class UserCreatedEvent extends BaseEvent<{ userId: string; email: string }> {

@@ -1,15 +1,18 @@
 import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
-  beforeAll,
-  beforeEach,
-  afterAll,
-  afterEach,
 } from 'bun:test';
-import { RabbitMQContainer, type StartedRabbitMQContainer } from '@testcontainers/rabbitmq';
-import type { Transport, Subscription } from '../../src/transport/index.js';
+import {
+  RabbitMQContainer,
+  type StartedRabbitMQContainer,
+} from '@testcontainers/rabbitmq';
 import type { Topology } from '../../src/topology/types.js';
+import type { Subscription, Transport } from '../../src/transport/index.js';
 import { MemoryTransport } from '../../src/transport/memory/memory-transport.js';
 import {
   RabbitMQTransport,

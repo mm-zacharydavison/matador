@@ -32,6 +32,9 @@ export {
 
 export { MemoryTransport } from './memory/memory-transport.js';
 
+export type { FallbackTransportConfig } from './fallback/fallback-transport.js';
+export { FallbackTransport } from './fallback/fallback-transport.js';
+
 export type { RabbitMQTransportConfig } from './rabbitmq/rabbitmq-transport.js';
 export {
   RabbitMQTransport,

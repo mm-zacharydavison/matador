@@ -5,6 +5,7 @@ export type {
   EnqueueWarningContext,
   Logger,
   MatadorHooks,
+  TransportFallbackContext,
   WorkerErrorContext,
   WorkerExecuteFn,
   WorkerSuccessContext,

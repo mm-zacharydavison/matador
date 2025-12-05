@@ -1,3 +1,4 @@
+import { type Logger, consoleLogger } from '../../hooks/index.js';
 import type { Topology } from '../../topology/types.js';
 import type { Envelope } from '../../types/index.js';
 import type { TransportCapabilities } from '../capabilities.js';
@@ -9,7 +10,6 @@ import type {
   Subscription,
   Transport,
 } from '../transport.js';
-import { consoleLogger, type Logger } from '../../hooks/index.js';
 
 /**
  * Capabilities of the MemoryTransport.
@@ -92,7 +92,10 @@ export class MemoryTransport implements Transport {
       throw new Error('Transport not connected');
     }
 
-    // Initialize queues for the topology
+    // Initialize queues for the topology.
+    // Note: Retry queues are not pre-created here because MemoryTransport handles
+    // retries by re-enqueueing messages with a delay to the original queue, matching
+    // how the pipeline schedules retries via transport.send() with a delay option.
     for (const queueDef of topology.queues) {
       const queueName = `${topology.namespace}.${queueDef.name}`;
       if (!this.queues.has(queueName)) {
@@ -110,27 +113,35 @@ export class MemoryTransport implements Transport {
       throw new Error('Transport not connected');
     }
 
-    // Handle delayed messages
+    // Handle delayed messages (non-blocking, like real transports)
     if (options?.delay !== undefined && options.delay > 0) {
-      await this.sendDelayed(queue, envelope, options.delay);
+      this.scheduleDelayedMessage(queue, envelope, options.delay);
       return;
     }
 
     await this.enqueue(queue, envelope);
   }
 
-  private async sendDelayed(
+  /**
+   * Schedules a message for delayed delivery.
+   * Returns immediately (non-blocking) to match real transport behavior.
+   */
+  private scheduleDelayedMessage(
     queue: string,
     envelope: Envelope,
     delayMs: number,
-  ): Promise<void> {
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
-        this.delayedTimers.delete(timer);
-        this.enqueue(queue, envelope).then(resolve);
-      }, delayMs);
-      this.delayedTimers.add(timer);
-    });
+  ): void {
+    const timer = setTimeout(() => {
+      this.delayedTimers.delete(timer);
+      // Fire and forget - errors are logged in enqueue/deliverToSubscribers
+      this.enqueue(queue, envelope).catch((error) => {
+        this.logger.error(
+          '[Matador] 🔴 Failed to enqueue delayed message',
+          error,
+        );
+      });
+    }, delayMs);
+    this.delayedTimers.add(timer);
   }
 
   private async enqueue(queue: string, envelope: Envelope): Promise<void> {

@@ -1,11 +1,8 @@
-import type {
-  ChannelModel,
-  Channel,
-  ConsumeMessage,
-  Options,
-} from 'amqplib';
+import type { Channel, ChannelModel, ConsumeMessage, Options } from 'amqplib';
 import amqplib from 'amqplib';
-import type { Topology, QueueDefinition } from '../../topology/types.js';
+import { JsonCodec } from '../../codec/json-codec.js';
+import { type Logger, consoleLogger } from '../../hooks/index.js';
+import type { QueueDefinition, Topology } from '../../topology/types.js';
 import type { Envelope } from '../../types/index.js';
 import type { TransportCapabilities } from '../capabilities.js';
 import {
@@ -20,8 +17,6 @@ import type {
   Subscription,
   Transport,
 } from '../transport.js';
-import { JsonCodec } from '../../codec/json-codec.js';
-import { consoleLogger, type Logger } from '../../hooks/index.js';
 
 /**
  * Configuration options for the RabbitMQ transport.
@@ -213,7 +208,12 @@ export class RabbitMQTransport implements Transport {
         ...publishOptions.headers,
         'x-delay': options.delay,
       };
-      this.publishChannel.publish(delayedExchange, queue, buffer, publishOptions);
+      this.publishChannel.publish(
+        delayedExchange,
+        queue,
+        buffer,
+        publishOptions,
+      );
       return;
     }
 
@@ -264,13 +264,14 @@ export class RabbitMQTransport implements Transport {
         };
 
         try {
-          const envelope = this.codec.decode(
-            new Uint8Array(msg.content),
-          );
+          const envelope = this.codec.decode(new Uint8Array(msg.content));
           await handler(envelope, receipt);
         } catch (error) {
           // Handler errors should be caught in the pipeline
-          this.logger.error('[Matador] 🔴 Handler error in message processing', error);
+          this.logger.error(
+            '[Matador] 🔴 Handler error in message processing',
+            error,
+          );
         }
       },
       { noAck: false }, // Always manually ack
@@ -545,7 +546,9 @@ export class RabbitMQTransport implements Transport {
                 ...this._capabilities,
                 delayedMessages: true,
               };
-              this.logger.debug('[Matador] 🔌 Delayed message exchange plugin detected');
+              this.logger.debug(
+                '[Matador] 🔌 Delayed message exchange plugin detected',
+              );
               // Close the probe channel gracefully
               probeChannel.close().catch(() => {});
               safeResolve();
