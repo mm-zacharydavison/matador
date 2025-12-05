@@ -15,12 +15,10 @@ export {
   // Base class
   MatadorError,
   isMatadorError,
-
   // Lifecycle errors
   NotStartedError,
   isNotStartedError,
   ShutdownInProgressError,
-
   // Transport errors
   TransportNotConnectedError,
   isTransportNotConnectedError,
@@ -28,7 +26,6 @@ export {
   TransportSendError,
   AllTransportsFailedError,
   DelayedMessagesNotSupportedError,
-
   // Schema & configuration errors
   EventNotRegisteredError,
   isEventNotRegisteredError,
@@ -38,19 +35,15 @@ export {
   InvalidSchemaError,
   SubscriberIsStubError,
   MemoryTransportCannotProcessStubError,
-
   // Queue errors
   QueueNotFoundError,
-
   // Event validation errors
   InvalidEventError,
-
   // Message processing errors
   MessageMaybePoisonedError,
   isMessageMaybePoisonedError,
   IdempotentMessageCannotRetryError,
   isIdempotentMessageCannotRetryError,
-
   // Timeout errors
   TimeoutError,
 } from './matador-errors.js';

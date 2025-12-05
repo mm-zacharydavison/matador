@@ -122,7 +122,9 @@ export class FanoutEngine {
         await this.transport.send(
           qualifiedQueue,
           envelope,
-          options.delayMs !== undefined ? { delay: options.delayMs } : undefined,
+          options.delayMs !== undefined
+            ? { delay: options.delayMs }
+            : undefined,
         );
         dispatched++;
 
@@ -131,8 +133,7 @@ export class FanoutEngine {
           queue: qualifiedQueue,
         });
       } catch (error) {
-        const cause =
-          error instanceof Error ? error : new Error(String(error));
+        const cause = error instanceof Error ? error : new Error(String(error));
         const err = new TransportSendError(qualifiedQueue, cause);
         errors.push({
           subscriberName: subscriber.name,

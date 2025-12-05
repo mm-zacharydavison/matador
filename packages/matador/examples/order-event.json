@@ -1,0 +1,19 @@
+{
+  "eventKey": "order.placed",
+  "data": {
+    "orderId": "ord_98765",
+    "userId": "usr_12345",
+    "amount": 149.99,
+    "items": [
+      { "productId": "prod_001", "quantity": 2 },
+      { "productId": "prod_002", "quantity": 1 }
+    ]
+  },
+  "options": {
+    "correlationId": "req_xyz789",
+    "metadata": {
+      "source": "cli-test",
+      "channel": "web"
+    }
+  }
+}

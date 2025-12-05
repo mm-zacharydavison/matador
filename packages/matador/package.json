@@ -11,6 +11,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "bin": {
+    "matador-cli": "./cli.ts"
+  },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
     "test": "bun test",
@@ -19,7 +22,9 @@
     "lint": "bunx biome check .",
     "lint:fix": "bunx biome check . --fix",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "cli": "bun ./cli.ts",
+    "send-test-event": "bun ./cli.ts ./examples/config.ts ./examples/event.ts"
   },
   "dependencies": {
     "amqplib": "^0.10.4"

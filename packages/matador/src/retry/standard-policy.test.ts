@@ -196,9 +196,7 @@ describe('StandardRetryPolicy', () => {
   });
 });
 
-function assertDeadLetter(
-  decision: RetryDecision,
-): asserts decision is {
+function assertDeadLetter(decision: RetryDecision): asserts decision is {
   action: 'dead-letter';
   queue: string;
   reason: string;
@@ -225,7 +223,8 @@ function createContext(
     handle: {},
     redelivered: false,
     attemptNumber: 1,
-    deliveryCount: receiptOverrides.deliveryCount ?? receiptOverrides.attemptNumber ?? 1,
+    deliveryCount:
+      receiptOverrides.deliveryCount ?? receiptOverrides.attemptNumber ?? 1,
     sourceQueue: 'test-queue',
     ...receiptOverrides,
   };

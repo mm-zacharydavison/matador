@@ -12,8 +12,8 @@ import {
   type StartedRabbitMQContainer,
 } from '@testcontainers/rabbitmq';
 import type { TransportFallbackContext } from '../../src/hooks/index.js';
-import type { Subscription } from '../../src/transport/index.js';
 import { FallbackTransport } from '../../src/transport/fallback/fallback-transport.js';
+import type { Subscription } from '../../src/transport/index.js';
 import { MemoryTransport } from '../../src/transport/memory/memory-transport.js';
 import {
   type RabbitMQTransport,

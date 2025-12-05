@@ -398,7 +398,10 @@ export class RabbitMQTransport implements Transport {
     }
 
     if (!this.connection) {
-      throw new TransportNotConnectedError(this.name, 'getOrCreateQueueChannel');
+      throw new TransportNotConnectedError(
+        this.name,
+        'getOrCreateQueueChannel',
+      );
     }
 
     // Create a dedicated channel for this queue to control prefetch independently
@@ -717,10 +720,7 @@ export class RabbitMQTransport implements Transport {
    * This tracks how many times the message was delivered without acknowledgment,
    * which helps detect crash loops.
    */
-  private getDeliveryCount(
-    msg: ConsumeMessage,
-    attemptNumber: number,
-  ): number {
+  private getDeliveryCount(msg: ConsumeMessage, attemptNumber: number): number {
     // Check for explicit delivery count header (some RabbitMQ setups track this)
     const deliveryCount = msg.properties.headers?.['x-delivery-count'];
     if (typeof deliveryCount === 'number') {
