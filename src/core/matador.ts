@@ -1,0 +1,259 @@
+import type { Codec } from '../codec/index.js';
+import { createJsonCodec } from '../codec/index.js';
+import type { MatadorHooks } from '../hooks/index.js';
+import { createSafeHooks } from '../hooks/index.js';
+import { createPipeline } from '../pipeline/index.js';
+import type { RetryPolicy } from '../retry/index.js';
+import { createRetryPolicy } from '../retry/index.js';
+import { createSchemaRegistry } from '../schema/index.js';
+import type { Topology } from '../topology/index.js';
+import { getQualifiedQueueName } from '../topology/index.js';
+import type { Subscription, Transport } from '../transport/index.js';
+import type {
+  AnySubscriber,
+  Event,
+  EventClass,
+  EventOptions,
+} from '../types/index.js';
+import type { DispatchResult } from './fanout.js';
+import { createFanoutEngine } from './fanout.js';
+import type { HandlersState, ShutdownConfig } from './shutdown.js';
+import { createShutdownManager } from './shutdown.js';
+
+/**
+ * Configuration for Matador.
+ */
+export interface MatadorConfig {
+  /** Transport for message delivery */
+  readonly transport: Transport;
+
+  /** Topology configuration */
+  readonly topology: Topology;
+
+  /** Queues to consume from (empty = no consumption) */
+  readonly consumeFrom?: readonly string[] | undefined;
+
+  /** Custom hooks */
+  readonly hooks?: MatadorHooks | undefined;
+
+  /** Custom codec (defaults to JSON) */
+  readonly codec?: Codec | undefined;
+
+  /** Custom retry policy */
+  readonly retryPolicy?: RetryPolicy | undefined;
+
+  /** Shutdown configuration */
+  readonly shutdownConfig?: Partial<ShutdownConfig> | undefined;
+}
+
+/**
+ * Matador - Transport-agnostic event processing library.
+ *
+ * Main orchestrator that wires together:
+ * - Transport: Message delivery
+ * - Schema: Event-subscriber registry
+ * - Pipeline: Message processing
+ * - Fanout: Event dispatch
+ * - Shutdown: Graceful termination
+ */
+export class Matador {
+  private readonly transport: Transport;
+  private readonly topology: Topology;
+  private readonly schema;
+  private readonly codec: Codec;
+  private readonly retryPolicy: RetryPolicy;
+  private readonly hooks;
+  private readonly pipeline;
+  private readonly fanout;
+  private readonly shutdownManager;
+  private readonly consumeFrom: readonly string[];
+  private readonly subscriptions: Subscription[] = [];
+  private started = false;
+
+  constructor(config: MatadorConfig) {
+    this.transport = config.transport;
+    this.topology = config.topology;
+    this.consumeFrom = config.consumeFrom ?? [];
+
+    // Initialize components
+    this.schema = createSchemaRegistry();
+    this.codec = config.codec ?? createJsonCodec();
+    this.retryPolicy = config.retryPolicy ?? createRetryPolicy();
+    this.hooks = createSafeHooks(config.hooks);
+
+    // Create pipeline
+    this.pipeline = createPipeline({
+      transport: this.transport,
+      schema: this.schema,
+      codec: this.codec,
+      retryPolicy: this.retryPolicy,
+      hooks: this.hooks,
+    });
+
+    // Create fanout engine
+    const defaultQueue = this.topology.queues[0]?.name ?? 'default';
+    this.fanout = createFanoutEngine({
+      transport: this.transport,
+      schema: this.schema,
+      hooks: this.hooks,
+      namespace: this.topology.namespace,
+      defaultQueue,
+    });
+
+    // Create shutdown manager
+    this.shutdownManager = createShutdownManager(
+      () => this.fanout.eventsBeingEnqueuedCount,
+      () => this.stopReceiving(),
+      () => this.transport.disconnect(),
+      config.shutdownConfig,
+    );
+  }
+
+  /**
+   * Registers an event class with its subscribers.
+   */
+  register<T>(
+    eventClass: EventClass<T>,
+    subscribers: readonly AnySubscriber<T>[],
+  ): this {
+    this.schema.register(eventClass, subscribers);
+    return this;
+  }
+
+  /**
+   * Starts Matador - connects transport and begins consuming.
+   */
+  async start(): Promise<void> {
+    if (this.started) {
+      throw new Error('Matador is already started');
+    }
+
+    // Validate schema
+    const validation = this.schema.validate();
+    if (!validation.valid) {
+      const errors = validation.issues.filter((i) => i.severity === 'error');
+      throw new Error(
+        `Schema validation failed: ${errors.map((e) => e.message).join(', ')}`,
+      );
+    }
+
+    // Connect transport
+    await this.transport.connect();
+
+    // Apply topology
+    await this.transport.applyTopology(this.topology);
+
+    // Subscribe to queues
+    for (const queueName of this.consumeFrom) {
+      const qualifiedName = getQualifiedQueueName(
+        this.topology.namespace,
+        queueName,
+      );
+      const queueDef = this.topology.queues.find((q) => q.name === queueName);
+
+      const subscription = await this.transport.subscribe(
+        qualifiedName,
+        async (envelope, receipt) => {
+          this.shutdownManager.incrementProcessing();
+          try {
+            const rawMessage = this.codec.encode(envelope);
+            await this.pipeline.process(rawMessage, receipt);
+          } finally {
+            this.shutdownManager.decrementProcessing();
+          }
+        },
+        queueDef?.concurrency !== undefined
+          ? { concurrency: queueDef.concurrency }
+          : undefined,
+      );
+
+      this.subscriptions.push(subscription);
+    }
+
+    this.started = true;
+  }
+
+  /**
+   * Dispatches an event to all registered subscribers.
+   */
+  async dispatch<T>(
+    event: Event<T>,
+    options?: EventOptions,
+  ): Promise<DispatchResult> {
+    if (!this.started) {
+      throw new Error('Matador is not started');
+    }
+
+    if (!this.shutdownManager.isEnqueueAllowed) {
+      throw new Error('Matador is shutting down, dispatch not allowed');
+    }
+
+    // Get event class from the event's constructor
+    const eventClass = event.constructor as EventClass<T>;
+
+    return this.fanout.dispatch(eventClass, event, options);
+  }
+
+  /**
+   * Gets current handler state.
+   */
+  getHandlersState(): HandlersState {
+    return this.shutdownManager.getHandlersState();
+  }
+
+  /**
+   * Checks if Matador is idle (no processing or enqueuing).
+   */
+  isIdle(): boolean {
+    return this.shutdownManager.getHandlersState().isIdle;
+  }
+
+  /**
+   * Waits for all handlers to become idle.
+   */
+  async waitForIdle(timeoutMs = 30000): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (!this.isIdle()) {
+      if (Date.now() > deadline) {
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    return true;
+  }
+
+  /**
+   * Gracefully shuts down Matador.
+   */
+  async shutdown(): Promise<void> {
+    if (!this.started) {
+      return;
+    }
+
+    await this.shutdownManager.shutdown();
+    this.started = false;
+  }
+
+  /**
+   * Checks if transport is connected.
+   */
+  isConnected(): boolean {
+    return this.transport.isConnected();
+  }
+
+  private async stopReceiving(): Promise<void> {
+    for (const subscription of this.subscriptions) {
+      await subscription.unsubscribe();
+    }
+    this.subscriptions.length = 0;
+  }
+}
+
+/**
+ * Creates a new Matador instance.
+ */
+export function createMatador(config: MatadorConfig): Matador {
+  return new Matador(config);
+}

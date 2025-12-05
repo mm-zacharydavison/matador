@@ -1,0 +1,265 @@
+import { describe, expect, it } from 'bun:test';
+import { TopologyValidationError, createTopology } from './builder.js';
+
+describe('TopologyBuilder', () => {
+  describe('withNamespace', () => {
+    it('should set the namespace', () => {
+      const topology = createTopology()
+        .withNamespace('myapp')
+        .addQueue('events')
+        .build();
+
+      expect(topology.namespace).toBe('myapp');
+    });
+
+    it('should reject empty namespace', () => {
+      const builder = createTopology().withNamespace('').addQueue('events');
+
+      expect(() => builder.build()).toThrow(TopologyValidationError);
+    });
+
+    it('should reject namespace starting with number', () => {
+      const builder = createTopology().withNamespace('123app').addQueue('events');
+
+      expect(() => builder.build()).toThrow(TopologyValidationError);
+    });
+
+    it('should allow hyphens and underscores in namespace', () => {
+      const topology = createTopology()
+        .withNamespace('my-app_v2')
+        .addQueue('events')
+        .build();
+
+      expect(topology.namespace).toBe('my-app_v2');
+    });
+  });
+
+  describe('addQueue', () => {
+    it('should add a queue with defaults', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      expect(topology.queues).toHaveLength(1);
+      expect(topology.queues[0]?.name).toBe('events');
+    });
+
+    it('should add queue with options', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events', {
+          concurrency: 5,
+          consumerTimeout: 30000,
+          priorities: true,
+        })
+        .build();
+
+      expect(topology.queues[0]?.concurrency).toBe(5);
+      expect(topology.queues[0]?.consumerTimeout).toBe(30000);
+      expect(topology.queues[0]?.priorities).toBe(true);
+    });
+
+    it('should add multiple queues', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .addQueue('notifications')
+        .addQueue('analytics')
+        .build();
+
+      expect(topology.queues).toHaveLength(3);
+    });
+
+    it('should reject duplicate queue names', () => {
+      const builder = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .addQueue('events');
+
+      expect(() => builder.build()).toThrow('Duplicate queue name');
+    });
+
+    it('should reject empty queue name', () => {
+      const builder = createTopology().withNamespace('test').addQueue('');
+
+      expect(() => builder.build()).toThrow('Queue name cannot be empty');
+    });
+
+    it('should reject queue names starting with number', () => {
+      const builder = createTopology().withNamespace('test').addQueue('123queue');
+
+      expect(() => builder.build()).toThrow('must start with a letter');
+    });
+
+    it('should reject invalid concurrency', () => {
+      const builder = createTopology()
+        .withNamespace('test')
+        .addQueue('events', { concurrency: 0 });
+
+      expect(() => builder.build()).toThrow('concurrency must be at least 1');
+    });
+
+    it('should reject negative consumer timeout', () => {
+      const builder = createTopology()
+        .withNamespace('test')
+        .addQueue('events', { consumerTimeout: -1 });
+
+      expect(() => builder.build()).toThrow('consumer timeout must be non-negative');
+    });
+  });
+
+  describe('withDeadLetter', () => {
+    it('should configure dead letter settings', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .withDeadLetter({
+          unhandled: { enabled: false },
+          undeliverable: { enabled: true },
+        })
+        .build();
+
+      expect(topology.deadLetter.unhandled.enabled).toBe(false);
+      expect(topology.deadLetter.undeliverable.enabled).toBe(true);
+    });
+
+    it('should merge with defaults', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .withDeadLetter({ unhandled: { enabled: false } })
+        .build();
+
+      // undeliverable should keep default
+      expect(topology.deadLetter.unhandled.enabled).toBe(false);
+      expect(topology.deadLetter.undeliverable.enabled).toBe(true);
+    });
+  });
+
+  describe('withRetry', () => {
+    it('should configure retry settings', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .withRetry({
+          enabled: true,
+          defaultDelayMs: 5000,
+          maxDelayMs: 600000,
+        })
+        .build();
+
+      expect(topology.retry.enabled).toBe(true);
+      expect(topology.retry.defaultDelayMs).toBe(5000);
+      expect(topology.retry.maxDelayMs).toBe(600000);
+    });
+
+    it('should reject negative default delay', () => {
+      const builder = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .withRetry({ defaultDelayMs: -1 });
+
+      expect(() => builder.build()).toThrow('delay must be non-negative');
+    });
+
+    it('should reject max delay less than default', () => {
+      const builder = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .withRetry({
+          defaultDelayMs: 10000,
+          maxDelayMs: 5000,
+        });
+
+      expect(() => builder.build()).toThrow(
+        'Max retry delay must be greater than or equal to default',
+      );
+    });
+  });
+
+  describe('withoutRetry', () => {
+    it('should disable retry', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .withoutRetry()
+        .build();
+
+      expect(topology.retry.enabled).toBe(false);
+    });
+  });
+
+  describe('withoutDeadLetter', () => {
+    it('should disable dead letter queues', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .withoutDeadLetter()
+        .build();
+
+      expect(topology.deadLetter.unhandled.enabled).toBe(false);
+      expect(topology.deadLetter.undeliverable.enabled).toBe(false);
+    });
+  });
+
+  describe('validate', () => {
+    it('should return issues without throwing', () => {
+      const builder = createTopology();
+      const issues = builder.validate();
+
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues).toContain('Namespace is required');
+      expect(issues).toContain('At least one queue is required');
+    });
+
+    it('should return empty array for valid topology', () => {
+      const builder = createTopology()
+        .withNamespace('test')
+        .addQueue('events');
+
+      const issues = builder.validate();
+      expect(issues).toHaveLength(0);
+    });
+  });
+
+  describe('build', () => {
+    it('should throw TopologyValidationError with issues', () => {
+      const builder = createTopology();
+
+      try {
+        builder.build();
+        expect(true).toBe(false); // Should not reach here
+      } catch (error) {
+        expect(error).toBeInstanceOf(TopologyValidationError);
+        expect((error as TopologyValidationError).issues).toContain(
+          'Namespace is required',
+        );
+      }
+    });
+
+    it('should return immutable topology', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      // Verify structure
+      expect(topology.namespace).toBe('test');
+      expect(topology.queues).toHaveLength(1);
+      expect(topology.deadLetter.unhandled.enabled).toBe(true);
+      expect(topology.retry.enabled).toBe(true);
+    });
+  });
+
+  describe('exact queue option', () => {
+    it('should mark queue as exact (external)', () => {
+      const topology = createTopology()
+        .withNamespace('test')
+        .addQueue('external-queue', { exact: true })
+        .build();
+
+      expect(topology.queues[0]?.exact).toBe(true);
+    });
+  });
+});
