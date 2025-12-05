@@ -1,3 +1,4 @@
+import { TransportSendError } from '../errors/index.js';
 import type { SafeHooks } from '../hooks/index.js';
 import type { SchemaRegistry } from '../schema/index.js';
 import { getQualifiedQueueName } from '../topology/index.js';
@@ -19,7 +20,6 @@ export interface FanoutConfig {
   readonly hooks: SafeHooks;
   readonly namespace: string;
   readonly defaultQueue: string;
-  readonly fallbackQueues?: readonly string[] | undefined;
 }
 
 /**
@@ -48,7 +48,7 @@ export interface DispatchError {
  * 1. Getting subscribers from schema
  * 2. Filtering by enabled() hook
  * 3. Creating envelopes for each subscriber
- * 4. Sending to appropriate queues with fallback
+ * 4. Sending to appropriate queues via transport
  */
 export class FanoutEngine {
   private readonly transport: Transport;
@@ -56,7 +56,6 @@ export class FanoutEngine {
   private readonly hooks: SafeHooks;
   private readonly namespace: string;
   private readonly defaultQueue: string;
-  private readonly fallbackQueues: readonly string[];
   private enqueuingCount = 0;
 
   constructor(config: FanoutConfig) {
@@ -65,7 +64,6 @@ export class FanoutEngine {
     this.hooks = config.hooks;
     this.namespace = config.namespace;
     this.defaultQueue = config.defaultQueue;
-    this.fallbackQueues = config.fallbackQueues ?? [];
   }
 
   /**
@@ -118,10 +116,14 @@ export class FanoutEngine {
         delayMs: options.delayMs,
       });
 
-      // Send with fallback chain
+      // Send to transport
       this.enqueuingCount++;
       try {
-        await this.sendWithFallback(qualifiedQueue, envelope, options.delayMs);
+        await this.transport.send(
+          qualifiedQueue,
+          envelope,
+          options.delayMs !== undefined ? { delay: options.delayMs } : undefined,
+        );
         dispatched++;
 
         await this.hooks.onEnqueueSuccess({
@@ -129,7 +131,9 @@ export class FanoutEngine {
           queue: qualifiedQueue,
         });
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
+        const cause =
+          error instanceof Error ? error : new Error(String(error));
+        const err = new TransportSendError(qualifiedQueue, cause);
         errors.push({
           subscriberName: subscriber.name,
           queue: qualifiedQueue,
@@ -167,53 +171,6 @@ export class FanoutEngine {
       // If enabled check fails, consider it enabled
       return true;
     }
-  }
-
-  private async sendWithFallback(
-    primaryQueue: string,
-    envelope: ReturnType<typeof createEnvelope>,
-    delayMs: number | undefined,
-  ): Promise<void> {
-    const queues = [
-      primaryQueue,
-      ...this.fallbackQueues.map((q) =>
-        getQualifiedQueueName(this.namespace, q),
-      ),
-    ];
-
-    let lastError: Error | undefined;
-
-    for (let i = 0; i < queues.length; i++) {
-      const queue = queues[i];
-      if (!queue) continue;
-
-      try {
-        await this.transport.send(
-          queue,
-          envelope,
-          delayMs !== undefined ? { delay: delayMs } : undefined,
-        );
-        return;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-
-        // Notify about fallback
-        if (i < queues.length - 1) {
-          const nextQueue = queues[i + 1];
-          if (nextQueue) {
-            await this.hooks.onEnqueueWarning({
-              envelope,
-              originalQueue: queue,
-              fallbackQueue: nextQueue,
-              error: lastError,
-            });
-          }
-        }
-      }
-    }
-
-    // All queues failed
-    throw lastError ?? new Error('All queues failed');
   }
 }
 

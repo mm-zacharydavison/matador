@@ -1,4 +1,10 @@
-import { isAssertionError, isDoRetry, isDontRetry } from '../errors/index.js';
+import {
+  IdempotentMessageCannotRetryError,
+  MessageMaybePoisonedError,
+  isAssertionError,
+  isDoRetry,
+  isDontRetry,
+} from '../errors/index.js';
 import type { RetryContext, RetryDecision, RetryPolicy } from './policy.js';
 
 /**
@@ -16,6 +22,14 @@ export interface StandardRetryPolicyConfig {
 
   /** Multiplier for exponential backoff */
   readonly backoffMultiplier: number;
+
+  /**
+   * Maximum native delivery count before considering message poisoned.
+   * This prevents crash loops from messages that crash the worker.
+   * Poison messages are sent directly to the dead-letter queue.
+   * Default: 5
+   */
+  readonly maxDeliveries: number;
 }
 
 /**
@@ -26,18 +40,20 @@ export const defaultRetryConfig: StandardRetryPolicyConfig = {
   baseDelay: 1000,
   maxDelay: 300000, // 5 minutes
   backoffMultiplier: 2,
+  maxDeliveries: 5,
 };
 
 /**
  * Standard retry policy implementing Matador v1 behavior.
  *
- * Decision logic:
- * 1. EventAssertionError → dead-letter (never retry)
- * 2. DontRetry → dead-letter (explicit no-retry)
- * 3. DoRetry → retry if under max attempts
- * 4. Max attempts exceeded → dead-letter
- * 5. Non-idempotent subscriber on redelivery → dead-letter
- * 6. Default → retry with exponential backoff
+ * Decision logic (in priority order):
+ * 1. Poison message → dead-letter (prevent crash loops)
+ * 2. EventAssertionError → dead-letter (never retry)
+ * 3. DontRetry → dead-letter (explicit no-retry)
+ * 4. DoRetry → retry if under max attempts
+ * 5. Max attempts exceeded → dead-letter
+ * 6. Non-idempotent subscriber on redelivery → dead-letter
+ * 7. Default → retry with exponential backoff
  */
 export class StandardRetryPolicy implements RetryPolicy {
   private readonly config: StandardRetryPolicyConfig;
@@ -47,10 +63,24 @@ export class StandardRetryPolicy implements RetryPolicy {
   }
 
   shouldRetry(context: RetryContext): RetryDecision {
-    const { error, subscriber, receipt } = context;
+    const { envelope, error, subscriber, receipt } = context;
     const errorMessage = error.message;
 
-    // 1. Assertion errors never retry
+    // 1. Poison message detection - prevent crash loops
+    if (receipt.deliveryCount >= this.config.maxDeliveries) {
+      const poisonError = new MessageMaybePoisonedError(
+        envelope.id,
+        receipt.deliveryCount,
+        this.config.maxDeliveries,
+      );
+      return {
+        action: 'dead-letter',
+        queue: 'undeliverable',
+        reason: poisonError.message,
+      };
+    }
+
+    // 2. Assertion errors never retry
     if (isAssertionError(error)) {
       return {
         action: 'dead-letter',
@@ -59,7 +89,7 @@ export class StandardRetryPolicy implements RetryPolicy {
       };
     }
 
-    // 2. Explicit no-retry
+    // 3. Explicit no-retry
     if (isDontRetry(error)) {
       return {
         action: 'dead-letter',
@@ -68,7 +98,7 @@ export class StandardRetryPolicy implements RetryPolicy {
       };
     }
 
-    // 3. Explicit retry request
+    // 4. Explicit retry request
     if (isDoRetry(error)) {
       if (receipt.attemptNumber >= this.config.maxAttempts) {
         return {
@@ -83,7 +113,7 @@ export class StandardRetryPolicy implements RetryPolicy {
       };
     }
 
-    // 4. Max attempts exceeded
+    // 5. Max attempts exceeded
     if (receipt.attemptNumber >= this.config.maxAttempts) {
       return {
         action: 'dead-letter',
@@ -92,16 +122,20 @@ export class StandardRetryPolicy implements RetryPolicy {
       };
     }
 
-    // 5. Non-idempotent subscriber on redelivery
+    // 6. Non-idempotent subscriber on redelivery
     if (receipt.redelivered && subscriber.idempotent === 'no') {
+      const idempotentError = new IdempotentMessageCannotRetryError(
+        envelope.id,
+        subscriber.name,
+      );
       return {
         action: 'dead-letter',
         queue: 'undeliverable',
-        reason: 'non-idempotent subscriber cannot be retried after redelivery',
+        reason: idempotentError.message,
       };
     }
 
-    // 6. Default: retry with backoff
+    // 7. Default: retry with backoff
     return {
       action: 'retry',
       delay: this.getDelay(context),

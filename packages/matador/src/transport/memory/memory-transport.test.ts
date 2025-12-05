@@ -45,8 +45,8 @@ describe('MemoryTransport', () => {
       await transport.disconnect();
       const envelope = createTestEnvelope();
 
-      expect(transport.send('test-queue', envelope)).rejects.toThrow(
-        'Transport not connected',
+      await expect(transport.send('test-queue', envelope)).rejects.toThrow(
+        'is not connected',
       );
     });
 
@@ -97,9 +97,9 @@ describe('MemoryTransport', () => {
     it('should throw when subscribing while disconnected', async () => {
       await transport.disconnect();
 
-      expect(transport.subscribe('test-queue', async () => {})).rejects.toThrow(
-        'Transport not connected',
-      );
+      await expect(
+        transport.subscribe('test-queue', async () => {}),
+      ).rejects.toThrow('is not connected');
     });
 
     it('should deliver messages to subscribers', async () => {

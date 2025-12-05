@@ -149,7 +149,7 @@ describe('FallbackTransport', () => {
       expect(ctx.successTransport).toBe('memory');
       expect(ctx.queue).toBe('test-queue');
       expect(ctx.envelope).toBe(envelope);
-      expect(ctx.error.message).toBe('Transport not connected');
+      expect(ctx.error.message).toContain('is not connected');
     });
 
     it('should throw when all transports fail', async () => {
@@ -158,7 +158,7 @@ describe('FallbackTransport', () => {
 
       const envelope = createTestEnvelope();
       await expect(transport.send('test-queue', envelope)).rejects.toThrow(
-        'Transport not connected',
+        'All transports failed',
       );
     });
 

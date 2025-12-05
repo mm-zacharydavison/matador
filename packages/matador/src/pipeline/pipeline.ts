@@ -1,5 +1,9 @@
 import type { Codec } from '../codec/index.js';
 import { CodecDecodeError } from '../codec/index.js';
+import {
+  SubscriberIsStubError,
+  SubscriberNotRegisteredError,
+} from '../errors/index.js';
 import type { SafeHooks } from '../hooks/index.js';
 import type { RetryDecision, RetryPolicy } from '../retry/index.js';
 import type { SchemaRegistry } from '../schema/index.js';
@@ -93,17 +97,21 @@ export class ProcessingPipeline {
     );
 
     if (!subscriberDef) {
+      const error = new SubscriberNotRegisteredError(
+        envelope.docket.targetSubscriber,
+        envelope.docket.eventKey,
+      );
       await this.sendToDeadLetter(
         receipt,
         envelope,
         'unhandled',
-        `subscriber "${envelope.docket.targetSubscriber}" not found for event "${envelope.docket.eventKey}"`,
+        error.message,
       );
 
       return {
         success: false,
         envelope,
-        error: new Error('Subscriber not found in schema'),
+        error,
         durationMs: performance.now() - startTime,
       };
     }
@@ -116,18 +124,19 @@ export class ProcessingPipeline {
 
     if (!subscriber) {
       // Subscriber is a stub (remote implementation)
+      const error = new SubscriberIsStubError(envelope.docket.targetSubscriber);
       await this.sendToDeadLetter(
         receipt,
         envelope,
         'unhandled',
-        `subscriber "${envelope.docket.targetSubscriber}" is a stub with no local implementation`,
+        error.message,
       );
 
       return {
         success: false,
         envelope,
         subscriber: subscriberDef,
-        error: new Error('Subscriber is a stub'),
+        error,
         durationMs: performance.now() - startTime,
       };
     }

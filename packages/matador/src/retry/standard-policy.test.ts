@@ -88,7 +88,7 @@ describe('StandardRetryPolicy', () => {
 
       expect(decision.action).toBe('dead-letter');
       assertDeadLetter(decision);
-      expect(decision.reason).toContain('non-idempotent subscriber');
+      expect(decision.reason).toContain('Non-idempotent subscriber');
     });
 
     it('should retry idempotent subscriber on redelivery', () => {
@@ -183,7 +183,11 @@ describe('StandardRetryPolicy', () => {
 
     it('should merge partial configuration with defaults', () => {
       const policy = createRetryPolicy({ maxAttempts: 10 });
-      const context = createContext(new Error(), { attemptNumber: 5 });
+      // Use attemptNumber: 5 but deliveryCount: 3 to avoid poison detection
+      const context = createContext(new Error(), {
+        attemptNumber: 5,
+        deliveryCount: 3,
+      });
 
       // Should still retry because we increased maxAttempts
       const decision = policy.shouldRetry(context);
@@ -221,6 +225,7 @@ function createContext(
     handle: {},
     redelivered: false,
     attemptNumber: 1,
+    deliveryCount: receiptOverrides.deliveryCount ?? receiptOverrides.attemptNumber ?? 1,
     sourceQueue: 'test-queue',
     ...receiptOverrides,
   };

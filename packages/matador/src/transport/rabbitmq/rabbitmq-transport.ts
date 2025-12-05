@@ -1,6 +1,10 @@
 import type { Channel, ChannelModel, ConsumeMessage, Options } from 'amqplib';
 import amqplib from 'amqplib';
 import { JsonCodec } from '../../codec/json-codec.js';
+import {
+  DelayedMessagesNotSupportedError,
+  TransportNotConnectedError,
+} from '../../errors/index.js';
 import { type Logger, consoleLogger } from '../../hooks/index.js';
 import type { QueueDefinition, Topology } from '../../topology/types.js';
 import type { Envelope } from '../../types/index.js';
@@ -127,7 +131,7 @@ export class RabbitMQTransport implements Transport {
     this.topology = topology;
 
     if (!this.publishChannel) {
-      throw new Error('Transport not connected');
+      throw new TransportNotConnectedError(this.name, 'applyTopology');
     }
 
     const channel = this.publishChannel;
@@ -171,7 +175,7 @@ export class RabbitMQTransport implements Transport {
     options?: SendOptions,
   ): Promise<void> {
     if (!this.publishChannel || !this.topology) {
-      throw new Error('Transport not connected or topology not applied');
+      throw new TransportNotConnectedError(this.name, 'send');
     }
 
     const buffer = Buffer.from(this.codec.encode(envelope));
@@ -195,10 +199,7 @@ export class RabbitMQTransport implements Transport {
     // Handle delayed messages
     if (options?.delay !== undefined && options.delay > 0) {
       if (!this.delayedExchangeAvailable) {
-        throw new Error(
-          'Delayed messages require the RabbitMQ delayed message exchange plugin. ' +
-            'Install rabbitmq_delayed_message_exchange or disable delayed messages.',
-        );
+        throw new DelayedMessagesNotSupportedError(this.name);
       }
 
       const delayedExchange = this.getDelayedExchangeName(
@@ -238,7 +239,7 @@ export class RabbitMQTransport implements Transport {
     options: SubscribeOptions = {},
   ): Promise<Subscription> {
     if (!this.connection || !this.topology) {
-      throw new Error('Transport not connected or topology not applied');
+      throw new TransportNotConnectedError(this.name, 'subscribe');
     }
 
     // Get or create a dedicated channel for this queue
@@ -256,10 +257,12 @@ export class RabbitMQTransport implements Transport {
       async (msg: ConsumeMessage | null) => {
         if (!msg || !consumer.active) return;
 
+        const attemptNumber = this.getAttemptNumber(msg);
         const receipt: MessageReceipt = {
           handle: { channel, msg },
           redelivered: msg.fields.redelivered,
-          attemptNumber: this.getAttemptNumber(msg),
+          attemptNumber,
+          deliveryCount: this.getDeliveryCount(msg, attemptNumber),
           sourceQueue: queue,
         };
 
@@ -334,7 +337,7 @@ export class RabbitMQTransport implements Transport {
     reason: string,
   ): Promise<void> {
     if (!this.publishChannel || !this.topology) {
-      throw new Error('Transport not connected');
+      throw new TransportNotConnectedError(this.name, 'sendToDeadLetter');
     }
 
     // Add error info to envelope
@@ -395,7 +398,7 @@ export class RabbitMQTransport implements Transport {
     }
 
     if (!this.connection) {
-      throw new Error('Transport not connected');
+      throw new TransportNotConnectedError(this.name, 'getOrCreateQueueChannel');
     }
 
     // Create a dedicated channel for this queue to control prefetch independently
@@ -707,6 +710,41 @@ export class RabbitMQTransport implements Transport {
       return deathCount + 1;
     }
     return 1;
+  }
+
+  /**
+   * Gets the native delivery count for poison message detection.
+   * This tracks how many times the message was delivered without acknowledgment,
+   * which helps detect crash loops.
+   */
+  private getDeliveryCount(
+    msg: ConsumeMessage,
+    attemptNumber: number,
+  ): number {
+    // Check for explicit delivery count header (some RabbitMQ setups track this)
+    const deliveryCount = msg.properties.headers?.['x-delivery-count'];
+    if (typeof deliveryCount === 'number') {
+      return deliveryCount;
+    }
+
+    // Check x-death header for dead-letter redelivery count
+    const xDeath = msg.properties.headers?.['x-death'];
+    if (Array.isArray(xDeath) && xDeath.length > 0) {
+      const deathCount = xDeath.reduce(
+        (sum: number, death: { count?: number }) => sum + (death.count ?? 0),
+        0,
+      );
+      // Add 1 because we're currently being delivered again
+      return deathCount + 1;
+    }
+
+    // If redelivered flag is set but no other tracking, count as 2 (first + this delivery)
+    if (msg.fields.redelivered) {
+      return Math.max(2, attemptNumber);
+    }
+
+    // Default to attempt number
+    return attemptNumber;
   }
 }
 

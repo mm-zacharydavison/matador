@@ -1,3 +1,4 @@
+import { TransportNotConnectedError } from '../../errors/index.js';
 import { type Logger, consoleLogger } from '../../hooks/index.js';
 import type { Topology } from '../../topology/types.js';
 import type { Envelope } from '../../types/index.js';
@@ -89,7 +90,7 @@ export class MemoryTransport implements Transport {
 
   async applyTopology(topology: Topology): Promise<void> {
     if (!this.connected) {
-      throw new Error('Transport not connected');
+      throw new TransportNotConnectedError(this.name, 'applyTopology');
     }
 
     // Initialize queues for the topology.
@@ -110,7 +111,7 @@ export class MemoryTransport implements Transport {
     options?: SendOptions,
   ): Promise<void> {
     if (!this.connected) {
-      throw new Error('Transport not connected');
+      throw new TransportNotConnectedError(this.name, 'send');
     }
 
     // Handle delayed messages (non-blocking, like real transports)
@@ -174,6 +175,7 @@ export class MemoryTransport implements Transport {
         handle: message,
         redelivered: false,
         attemptNumber: message.envelope.attempts,
+        deliveryCount: message.envelope.attempts,
         sourceQueue: queue,
       };
 
@@ -192,7 +194,7 @@ export class MemoryTransport implements Transport {
     options: SubscribeOptions = {},
   ): Promise<Subscription> {
     if (!this.connected) {
-      throw new Error('Transport not connected');
+      throw new TransportNotConnectedError(this.name, 'subscribe');
     }
 
     const subscription: ActiveSubscription = {
@@ -304,6 +306,7 @@ export class MemoryTransport implements Transport {
       handle: pending,
       redelivered: false,
       attemptNumber: pending.envelope.attempts,
+      deliveryCount: pending.envelope.attempts,
       sourceQueue: queue,
     };
 

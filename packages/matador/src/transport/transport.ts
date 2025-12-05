@@ -89,6 +89,14 @@ export interface MessageReceipt {
   /** 1-based attempt number (transport-reported if capable, else from envelope) */
   readonly attemptNumber: number;
 
+  /**
+   * Native delivery count from the transport.
+   * Tracks how many times this specific message was delivered without acknowledgment.
+   * Used for poison message detection to prevent crash loops.
+   * For transports that don't track this, defaults to attemptNumber.
+   */
+  readonly deliveryCount: number;
+
   /** Original queue/topic the message came from */
   readonly sourceQueue: string;
 }

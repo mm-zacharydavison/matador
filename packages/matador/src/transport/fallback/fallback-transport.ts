@@ -1,3 +1,4 @@
+import { AllTransportsFailedError } from '../../errors/index.js';
 import type { TransportFallbackContext } from '../../hooks/index.js';
 import type { Topology } from '../../topology/types.js';
 import type { Envelope } from '../../types/index.js';
@@ -124,7 +125,7 @@ export class FallbackTransport implements Transport {
     envelope: Envelope,
     options?: SendOptions,
   ): Promise<void> {
-    let lastError: Error | undefined;
+    const errors: Error[] = [];
     let lastFailedTransportName: string | undefined;
 
     for (const transport of this.transports) {
@@ -132,26 +133,27 @@ export class FallbackTransport implements Transport {
         await transport.send(queue, envelope, options);
 
         // If we had a previous failure, notify about fallback
-        if (lastError && lastFailedTransportName && this.onFallback) {
+        if (errors.length > 0 && lastFailedTransportName && this.onFallback) {
           this.onFallback({
             envelope,
             queue,
             failedTransport: lastFailedTransportName,
             successTransport: transport.name,
-            error: lastError,
+            error: errors[errors.length - 1]!,
           });
         }
 
         return;
       } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
+        const err = error instanceof Error ? error : new Error(String(error));
+        errors.push(err);
         lastFailedTransportName = transport.name;
         // Continue to next transport
       }
     }
 
     // All transports failed
-    throw lastError ?? new Error('All transports failed to send message');
+    throw new AllTransportsFailedError(queue, errors);
   }
 
   async subscribe(

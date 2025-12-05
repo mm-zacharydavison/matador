@@ -130,7 +130,8 @@ describe('Matador', () => {
 
       await matador.start();
 
-      expect(matador.start()).rejects.toThrow('already started');
+      // start() is idempotent - calling it again should not throw
+      await expect(matador.start()).resolves.toBeUndefined();
     });
 
     it('should throw on invalid schema', async () => {
@@ -183,7 +184,9 @@ describe('Matador', () => {
         email: 'test@example.com',
       });
 
-      expect(matador.dispatch(event)).rejects.toThrow('not started');
+      await expect(matador.dispatch(event)).rejects.toThrow(
+        'Matador has not been started',
+      );
     });
 
     it('should dispatch events to transport', async () => {

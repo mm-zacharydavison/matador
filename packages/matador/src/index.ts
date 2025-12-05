@@ -110,11 +110,13 @@ export type {
   MatadorSchema,
   RegisterOptions,
   SchemaEntry,
+  SchemaEntryTuple,
   SchemaIssue,
   SchemaValidationResult,
 } from './schema/index.js';
 export {
   createSchemaRegistry,
+  isSchemaEntryTuple,
   SchemaError,
   SchemaRegistry,
 } from './schema/index.js';
@@ -153,12 +155,57 @@ export { createPipeline, ProcessingPipeline } from './pipeline/index.js';
 // Errors
 export type { HasDescription } from './errors/index.js';
 export {
+  // Retry control errors
   DontRetry,
   DoRetry,
   EventAssertionError,
-  hasDescription,
+  RetryControlError,
   isAssertionError,
   isDontRetry,
   isDoRetry,
-  RetryControlError,
+
+  // Matador errors with descriptions
+  MatadorError,
+  isMatadorError,
+
+  // Lifecycle errors
+  NotStartedError,
+  isNotStartedError,
+  ShutdownInProgressError,
+
+  // Transport errors
+  TransportNotConnectedError,
+  isTransportNotConnectedError,
+  TransportClosedError,
+  TransportSendError,
+  AllTransportsFailedError,
+  DelayedMessagesNotSupportedError,
+
+  // Schema & configuration errors
+  EventNotRegisteredError,
+  isEventNotRegisteredError,
+  SubscriberNotRegisteredError,
+  isSubscriberNotRegisteredError,
+  NoSubscribersExistError,
+  InvalidSchemaError,
+  SubscriberIsStubError,
+  MemoryTransportCannotProcessStubError,
+
+  // Queue errors
+  QueueNotFoundError,
+
+  // Event validation errors
+  InvalidEventError,
+
+  // Message processing errors
+  MessageMaybePoisonedError,
+  isMessageMaybePoisonedError,
+  IdempotentMessageCannotRetryError,
+  isIdempotentMessageCannotRetryError,
+
+  // Timeout errors
+  TimeoutError,
+
+  // Utility
+  hasDescription,
 } from './errors/index.js';

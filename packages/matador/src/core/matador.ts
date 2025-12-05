@@ -1,11 +1,17 @@
 import type { Codec } from '../codec/index.js';
 import { createJsonCodec } from '../codec/index.js';
+import {
+  InvalidSchemaError,
+  NotStartedError,
+  ShutdownInProgressError,
+} from '../errors/index.js';
 import type { MatadorHooks } from '../hooks/index.js';
 import { createSafeHooks } from '../hooks/index.js';
 import { createPipeline } from '../pipeline/index.js';
 import type { RetryPolicy } from '../retry/index.js';
 import { createRetryPolicy } from '../retry/index.js';
-import { createSchemaRegistry } from '../schema/index.js';
+import type { MatadorSchema } from '../schema/index.js';
+import { createSchemaRegistry, isSchemaEntryTuple } from '../schema/index.js';
 import type { Topology } from '../topology/index.js';
 import { getQualifiedQueueName } from '../topology/index.js';
 import type { Subscription, Transport } from '../transport/index.js';
@@ -121,19 +127,54 @@ export class Matador {
   }
 
   /**
+   * Registers events from a schema object.
+   * Supports both object format and tuple format entries.
+   *
+   * @example
+   * ```typescript
+   * // Tuple format
+   * matador.registerSchema({
+   *   [UserCreatedEvent.key]: [UserCreatedEvent, [emailSubscriber]],
+   *   [OrderPlacedEvent.key]: [OrderPlacedEvent, [invoiceSubscriber]],
+   * });
+   *
+   * // Object format
+   * matador.registerSchema({
+   *   [UserCreatedEvent.key]: { eventClass: UserCreatedEvent, subscribers: [emailSubscriber] },
+   * });
+   * ```
+   */
+  registerSchema(schema: MatadorSchema): this {
+    for (const entry of Object.values(schema)) {
+      if (isSchemaEntryTuple(entry)) {
+        // Tuple format: [EventClass, Subscriber[]]
+        const [eventClass, subscribers] = entry;
+        this.schema.register(eventClass, subscribers);
+      } else {
+        // Object format: { eventClass, subscribers }
+        this.schema.register(entry.eventClass, entry.subscribers);
+      }
+    }
+    return this;
+  }
+
+  /**
    * Starts Matador - connects transport and begins consuming.
+   * This method is idempotent - calling it multiple times is safe.
    */
   async start(): Promise<void> {
+    // Idempotent: if already started, just return
     if (this.started) {
-      throw new Error('Matador is already started');
+      return;
     }
 
     // Validate schema
     const validation = this.schema.validate();
     if (!validation.valid) {
       const errors = validation.issues.filter((i) => i.severity === 'error');
-      throw new Error(
-        `Schema validation failed: ${errors.map((e) => e.message).join(', ')}`,
+      throw new InvalidSchemaError(
+        'Schema validation failed',
+        errors.map((e) => e.message).join(', '),
       );
     }
 
@@ -181,11 +222,11 @@ export class Matador {
     options?: EventOptions,
   ): Promise<DispatchResult> {
     if (!this.started) {
-      throw new Error('Matador is not started');
+      throw new NotStartedError('dispatch');
     }
 
     if (!this.shutdownManager.isEnqueueAllowed) {
-      throw new Error('Matador is shutting down, dispatch not allowed');
+      throw new ShutdownInProgressError();
     }
 
     // Get event class from the event's constructor
