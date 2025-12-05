@@ -174,8 +174,8 @@ export class LocalTransport implements Transport {
       const receipt: MessageReceipt = {
         handle: message,
         redelivered: false,
-        attemptNumber: message.envelope.attempts,
-        deliveryCount: message.envelope.attempts,
+        attemptNumber: message.envelope.docket.attempts,
+        deliveryCount: message.envelope.docket.attempts,
         sourceQueue: queue,
       };
 
@@ -305,8 +305,8 @@ export class LocalTransport implements Transport {
     const receipt: MessageReceipt = {
       handle: pending,
       redelivered: false,
-      attemptNumber: pending.envelope.attempts,
-      deliveryCount: pending.envelope.attempts,
+      attemptNumber: pending.envelope.docket.attempts,
+      deliveryCount: pending.envelope.docket.attempts,
       sourceQueue: queue,
     };
 

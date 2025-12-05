@@ -103,8 +103,18 @@ export {
 } from './topology/index.js';
 
 // Codec
-export type { Codec } from './codec/index.js';
-export { CodecDecodeError, createJsonCodec, JsonCodec } from './codec/index.js';
+export type {
+  Codec,
+  EncodedMessage,
+  HeaderAwareCodec,
+} from './codec/index.js';
+export {
+  CodecDecodeError,
+  createJsonCodec,
+  createRabbitMQCodec,
+  JsonCodec,
+  RabbitMQCodec,
+} from './codec/index.js';
 
 // Schema
 export type {

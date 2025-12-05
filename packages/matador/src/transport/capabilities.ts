@@ -30,7 +30,7 @@ export interface TransportCapabilities {
   /**
    * Transport tracks delivery/attempt count natively.
    * - true: Receipt includes accurate attemptNumber from transport
-   * - false: Matador tracks attempts in envelope.attempts field
+   * - false: Matador tracks attempts in envelope.docket.attempts field
    */
   readonly attemptTracking: boolean;
 

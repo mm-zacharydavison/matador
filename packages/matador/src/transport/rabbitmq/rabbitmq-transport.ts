@@ -1,6 +1,6 @@
 import type { Channel, ChannelModel, ConsumeMessage, Options } from 'amqplib';
 import amqplib from 'amqplib';
-import { JsonCodec } from '../../codec/json-codec.js';
+import { RabbitMQCodec } from '../../codec/rabbitmq-codec.js';
 import {
   DelayedMessagesNotSupportedError,
   TransportNotConnectedError,
@@ -87,7 +87,7 @@ export class RabbitMQTransport implements Transport {
   private readonly connectionManager: ConnectionManager;
   private readonly queueChannels = new Map<string, QueueChannel>();
   private topology: Topology | null = null;
-  private readonly codec = new JsonCodec();
+  private readonly codec = new RabbitMQCodec();
 
   private readonly config: Required<
     Omit<RabbitMQTransportConfig, 'connection' | 'logger'>
@@ -178,18 +178,15 @@ export class RabbitMQTransport implements Transport {
       throw new TransportNotConnectedError(this.name, 'send');
     }
 
-    const buffer = Buffer.from(this.codec.encode(envelope));
+    const encoded = this.codec.encode(envelope);
+    const buffer = Buffer.from(encoded.body);
 
     const publishOptions: Options.Publish = {
       persistent: true,
-      contentType: this.codec.contentType,
+      contentType: encoded.contentType,
       messageId: envelope.id,
       timestamp: Date.now(),
-      headers: {
-        'x-matador-attempts': envelope.attempts,
-        'x-matador-event-key': envelope.docket.eventKey,
-        'x-matador-subscriber': envelope.docket.targetSubscriber,
-      },
+      headers: encoded.headers,
     };
 
     if (options?.priority !== undefined) {
@@ -267,7 +264,14 @@ export class RabbitMQTransport implements Transport {
         };
 
         try {
-          const envelope = this.codec.decode(new Uint8Array(msg.content));
+          const headers = (msg.properties.headers ?? {}) as Record<
+            string,
+            unknown
+          >;
+          const envelope = this.codec.decode(
+            new Uint8Array(msg.content),
+            headers,
+          );
           await handler(envelope, receipt);
         } catch (error) {
           // Handler errors should be caught in the pipeline
@@ -351,21 +355,19 @@ export class RabbitMQTransport implements Transport {
       },
     };
 
-    const buffer = Buffer.from(this.codec.encode(dlqEnvelope));
+    const encoded = this.codec.encode(dlqEnvelope);
+    const buffer = Buffer.from(encoded.body);
     const dlxExchange = this.getDLXExchangeName(this.topology.namespace);
     const dlqQueueName = `${receipt.sourceQueue}.${dlqName}`;
 
     const publishOptions: Options.Publish = {
       persistent: true,
-      contentType: this.codec.contentType,
+      contentType: encoded.contentType,
       messageId: envelope.id,
       timestamp: Date.now(),
       headers: {
-        'x-matador-attempts': envelope.attempts,
-        'x-matador-event-key': envelope.docket.eventKey,
-        'x-matador-subscriber': envelope.docket.targetSubscriber,
+        ...encoded.headers,
         'x-matador-dead-letter-reason': reason,
-        'x-matador-original-queue': receipt.sourceQueue,
       },
     };
 

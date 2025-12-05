@@ -218,8 +218,8 @@ export class ProcessingPipeline {
     switch (decision.action) {
       case 'retry': {
         // Increment attempts and schedule retry
-        envelope.attempts++;
-        envelope.scheduledFor = new Date(
+        envelope.docket.attempts++;
+        envelope.docket.scheduledFor = new Date(
           Date.now() + decision.delay,
         ).toISOString();
 

@@ -11,20 +11,8 @@ export interface Envelope<T = unknown> {
   /** The event payload data */
   readonly payload: EnvelopePayload<T>;
 
-  /** Routing and observability metadata */
+  /** Routing, processing state, and observability metadata */
   readonly docket: Docket;
-
-  /**
-   * Attempt counter managed by Matador (1-based).
-   * Incremented on each retry. Used when transport doesn't track attempts.
-   */
-  attempts: number;
-
-  /** When the envelope was first created (ISO 8601 string) */
-  readonly createdAt: string;
-
-  /** Scheduled processing time for delayed messages (ISO 8601 string) */
-  scheduledFor?: string | undefined;
 }
 
 /**
@@ -36,20 +24,47 @@ export interface EnvelopePayload<T = unknown> {
 }
 
 /**
- * Metadata associated with an envelope for routing and observability.
+ * Metadata associated with an envelope for routing, processing state, and observability.
  */
 export interface Docket {
+  // === Routing ===
+
   /** Event key for routing */
   readonly eventKey: string;
 
   /** Target subscriber name for 1:1 routing */
   readonly targetSubscriber: string;
 
-  /** Correlation ID for request tracing */
-  readonly correlationId?: string | undefined;
+  /** Original queue before any dead-letter routing */
+  originalQueue?: string | undefined;
+
+  /** Scheduled processing time for delayed messages (ISO 8601 string) */
+  scheduledFor?: string | undefined;
+
+  // === Processing State ===
+
+  /**
+   * Attempt counter managed by Matador (1-based).
+   * Incremented on each retry. Used when transport doesn't track attempts.
+   */
+  attempts: number;
+
+  /** When the envelope was first created (ISO 8601 string) */
+  readonly createdAt: string;
+
+  /** Error message from first failure (for debugging) */
+  firstError?: string | undefined;
+
+  /** Error message from most recent failure */
+  lastError?: string | undefined;
+
+  // === Observability ===
 
   /** Importance level for monitoring */
   readonly importance: Importance;
+
+  /** Correlation ID for request tracing */
+  readonly correlationId?: string | undefined;
 
   /**
    * Custom metadata provided by the application.
@@ -58,15 +73,6 @@ export interface Docket {
    * overrides universal metadata when keys conflict.
    */
   readonly metadata?: Record<string, unknown> | undefined;
-
-  /** Error message from first failure (for debugging) */
-  firstError?: string | undefined;
-
-  /** Error message from most recent failure */
-  lastError?: string | undefined;
-
-  /** Original queue before any dead-letter routing */
-  originalQueue?: string | undefined;
 }
 
 /**
@@ -129,19 +135,22 @@ export function createEnvelope<T>(
       data: options.data,
     },
     docket: {
+      // Routing
       eventKey: options.eventKey,
       targetSubscriber: options.targetSubscriber,
+      ...(options.delayMs !== undefined &&
+        options.delayMs > 0 && {
+          scheduledFor: new Date(Date.now() + options.delayMs).toISOString(),
+        }),
+      // Processing state
+      attempts: 1,
+      createdAt: now,
+      // Observability
       importance: options.importance,
       ...(options.correlationId !== undefined && {
         correlationId: options.correlationId,
       }),
       ...(mergedMetadata !== undefined && { metadata: mergedMetadata }),
     },
-    attempts: 1,
-    createdAt: now,
-    ...(options.delayMs !== undefined &&
-      options.delayMs > 0 && {
-        scheduledFor: new Date(Date.now() + options.delayMs).toISOString(),
-      }),
   };
 }

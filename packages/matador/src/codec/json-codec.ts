@@ -47,19 +47,22 @@ export class JsonCodec implements Codec {
 
     const envelope = value as Record<string, unknown>;
 
-    // Required fields
+    // Required top-level fields
     if (typeof envelope['id'] !== 'string') return false;
     if (typeof envelope['payload'] !== 'object' || envelope['payload'] === null)
       return false;
     if (typeof envelope['docket'] !== 'object' || envelope['docket'] === null)
       return false;
-    if (typeof envelope['attempts'] !== 'number') return false;
-    if (typeof envelope['createdAt'] !== 'string') return false;
 
-    // Validate docket
+    // Validate docket (routing, processing state, observability)
     const docket = envelope['docket'] as Record<string, unknown>;
+    // Routing
     if (typeof docket['eventKey'] !== 'string') return false;
     if (typeof docket['targetSubscriber'] !== 'string') return false;
+    // Processing state
+    if (typeof docket['attempts'] !== 'number') return false;
+    if (typeof docket['createdAt'] !== 'string') return false;
+    // Observability
     if (typeof docket['importance'] !== 'string') return false;
 
     // Validate payload
