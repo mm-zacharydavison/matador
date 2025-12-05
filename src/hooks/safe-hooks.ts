@@ -55,7 +55,7 @@ export class SafeHooks {
       try {
         await this.hooks.onWorkerWrap(envelope, subscriber, execute);
       } catch (error) {
-        this.logger.warn('Hook onWorkerWrap threw an error', error);
+        this.logger.warn('🟡 Hook onWorkerWrap threw an error', error);
         // Still try to execute if wrap failed
         await execute();
       }
@@ -106,7 +106,7 @@ export class SafeHooks {
       const result = await this.hooks.loadUniversalMetadata();
       return result ?? {};
     } catch (error) {
-      this.logger.warn('Hook loadUniversalMetadata threw an error', error);
+      this.logger.warn('🟡 Hook loadUniversalMetadata threw an error', error);
       return {};
     }
   }
@@ -119,7 +119,7 @@ export class SafeHooks {
     try {
       return this.hooks.getQueueConcurrency(queueName);
     } catch (error) {
-      this.logger.warn('Hook getQueueConcurrency threw an error', error);
+      this.logger.warn('🟡 Hook getQueueConcurrency threw an error', error);
       return undefined;
     }
   }
@@ -132,7 +132,7 @@ export class SafeHooks {
     try {
       return this.hooks.getRetryDelay(envelope, attemptNumber);
     } catch (error) {
-      this.logger.warn('Hook getRetryDelay threw an error', error);
+      this.logger.warn('🟡 Hook getRetryDelay threw an error', error);
       return undefined;
     }
   }
@@ -145,7 +145,7 @@ export class SafeHooks {
     try {
       return this.hooks.getAttempts(envelope);
     } catch (error) {
-      this.logger.warn('Hook getAttempts threw an error', error);
+      this.logger.warn('🟡 Hook getAttempts threw an error', error);
       return undefined;
     }
   }
@@ -158,7 +158,7 @@ export class SafeHooks {
     try {
       return this.hooks.getMaxDeliveries(envelope);
     } catch (error) {
-      this.logger.warn('Hook getMaxDeliveries threw an error', error);
+      this.logger.warn('🟡 Hook getMaxDeliveries threw an error', error);
       return undefined;
     }
   }
@@ -170,7 +170,7 @@ export class SafeHooks {
     try {
       await fn();
     } catch (error) {
-      this.logger.warn(`Hook ${hookName} threw an error`, error);
+      this.logger.warn(`🟡 Hook ${hookName} threw an error`, error);
     }
   }
 }

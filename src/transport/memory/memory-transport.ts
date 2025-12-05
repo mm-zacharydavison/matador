@@ -170,7 +170,7 @@ export class MemoryTransport implements Transport {
         await sub.handler(message.envelope, receipt);
       } catch (error) {
         // Handler errors should be caught in the pipeline
-        this.logger.error('Handler error in message processing', error);
+        this.logger.error('🔴 Handler error in message processing', error);
       }
     }
   }
