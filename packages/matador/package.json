@@ -1,0 +1,53 @@
+{
+  "name": "@meetsmore/matador-v2",
+  "version": "2.0.0",
+  "description": "Transport-agnostic event processing library",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:integration": "bun test --grep integration",
+    "lint": "bunx biome check .",
+    "lint:fix": "bunx biome check . --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4"
+  },
+  "devDependencies": {
+    "@testcontainers/rabbitmq": "^10.16.0",
+    "@types/amqplib": "^0.10.5",
+    "testcontainers": "^10.16.0"
+  },
+  "peerDependencies": {
+    "zod": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "events",
+    "messaging",
+    "queue",
+    "rabbitmq",
+    "bullmq",
+    "kafka",
+    "transport"
+  ],
+  "license": "MIT"
+}
