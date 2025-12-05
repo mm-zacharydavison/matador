@@ -150,7 +150,7 @@ export class ShutdownManager {
     while (!this.getHandlersState().isIdle) {
       if (Date.now() > deadline) {
         this.config.logger.warn(
-          `⚠️ Shutdown timeout reached with ${this.eventsBeingProcessed} events still processing`,
+          `[Matador] ⚠️ Shutdown timeout reached with ${this.eventsBeingProcessed} events still processing`,
         );
         break;
       }

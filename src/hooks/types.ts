@@ -16,10 +16,10 @@ export interface Logger {
  * Default logger that uses console.
  */
 export const consoleLogger: Logger = {
-  debug: (message, ...args) => console.debug(`[matador] ${message}`, ...args),
-  info: (message, ...args) => console.info(`[matador] ${message}`, ...args),
-  warn: (message, ...args) => console.warn(`[matador] ${message}`, ...args),
-  error: (message, ...args) => console.error(`[matador] ${message}`, ...args),
+  debug: (message, ...args) => console.debug(message, ...args),
+  info: (message, ...args) => console.info(message, ...args),
+  warn: (message, ...args) => console.warn(message, ...args),
+  error: (message, ...args) => console.error(message, ...args),
 };
 
 /**

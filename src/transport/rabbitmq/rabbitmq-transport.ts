@@ -270,7 +270,7 @@ export class RabbitMQTransport implements Transport {
           await handler(envelope, receipt);
         } catch (error) {
           // Handler errors should be caught in the pipeline
-          this.logger.error('🔴 Handler error in message processing', error);
+          this.logger.error('[Matador] 🔴 Handler error in message processing', error);
         }
       },
       { noAck: false }, // Always manually ack
@@ -424,7 +424,7 @@ export class RabbitMQTransport implements Transport {
 
     // Handle connection errors - let ConnectionManager handle reconnection
     connection.on('error', (err: Error) => {
-      this.logger.error('🔴 RabbitMQ connection error', err);
+      this.logger.error('[Matador] 🔴 RabbitMQ connection error', err);
     });
 
     connection.on('close', () => {
@@ -441,7 +441,7 @@ export class RabbitMQTransport implements Transport {
 
     // Handle publish channel errors to prevent unhandled error events
     this.publishChannel.on('error', (err: Error) => {
-      this.logger.error('🔴 RabbitMQ publish channel error', err);
+      this.logger.error('[Matador] 🔴 RabbitMQ publish channel error', err);
     });
 
     // Re-apply topology if we have one (reconnection scenario)
@@ -545,7 +545,7 @@ export class RabbitMQTransport implements Transport {
                 ...this._capabilities,
                 delayedMessages: true,
               };
-              this.logger.debug('🔌 Delayed message exchange plugin detected');
+              this.logger.debug('[Matador] 🔌 Delayed message exchange plugin detected');
               // Close the probe channel gracefully
               probeChannel.close().catch(() => {});
               safeResolve();
@@ -554,7 +554,7 @@ export class RabbitMQTransport implements Transport {
               // assertExchange failed - plugin not available
               // Channel is already closed by RabbitMQ, no need to close
               this.logger.warn(
-                '🟡 RabbitMQ delayed message exchange plugin not available. ' +
+                '[Matador] 🟡 RabbitMQ delayed message exchange plugin not available. ' +
                   'Delayed messages will not be supported.',
               );
               safeResolve();
