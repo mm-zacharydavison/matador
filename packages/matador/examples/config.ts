@@ -3,18 +3,16 @@
  *
  * This file demonstrates how to structure a config file for the CLI.
  * It exports:
- *   - events: Map of event keys to event classes
- *   - subscribers: Map of event keys to subscriber arrays
- *   - topology: (optional) Custom topology configuration
+ *   - schema: MatadorSchema mapping event keys to event classes and subscribers
+ *   - topology: Topology configuration
  */
 
 import {
-  type AnySubscriber,
   MatadorEvent,
-  type EventClass,
+  type MatadorSchema,
   type Topology,
+  TopologyBuilder,
   createSubscriber,
-  createTopology,
 } from '../src/index.js';
 
 // ============================================================================
@@ -94,17 +92,16 @@ const sendOrderConfirmation = createSubscriber('send-order-confirmation',
 // Exports
 // ============================================================================
 
-export const events: Record<string, EventClass> = {
-  [UserCreatedEvent.key]: UserCreatedEvent,
-  [OrderPlacedEvent.key]: OrderPlacedEvent,
+/**
+ * Matador schema mapping event keys to event classes and their subscribers.
+ * Uses the tuple format: [EventClass, Subscribers[]]
+ */
+export const schema: MatadorSchema = {
+  [UserCreatedEvent.key]: [UserCreatedEvent, [sendWelcomeEmail, trackUserAnalytics]],
+  [OrderPlacedEvent.key]: [OrderPlacedEvent, [processOrder, sendOrderConfirmation]],
 };
 
-export const subscribers: Record<string, AnySubscriber[]> = {
-  [UserCreatedEvent.key]: [sendWelcomeEmail, trackUserAnalytics],
-  [OrderPlacedEvent.key]: [processOrder, sendOrderConfirmation],
-};
-
-export const topology: Topology = createTopology()
+export const topology: Topology = TopologyBuilder.create()
   .withNamespace('example')
   .addQueue('events', { concurrency: 5 })
   .withoutDeadLetter()

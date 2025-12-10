@@ -178,20 +178,29 @@ export interface MatadorHooks {
   /**
    * Dynamic queue concurrency lookup.
    */
-  getQueueConcurrency?(queueName: string): number | undefined;
+  getQueueConcurrency?(
+    queueName: string,
+  ): number | undefined | Promise<number | undefined>;
 
   /**
    * Dynamic retry delay lookup.
    */
-  getRetryDelay?(envelope: Envelope, attemptNumber: number): number | undefined;
+  getRetryDelay?(
+    envelope: Envelope,
+    attemptNumber: number,
+  ): number | undefined | Promise<number | undefined>;
 
   /**
    * Dynamic max attempts lookup.
    */
-  getAttempts?(envelope: Envelope): number | undefined;
+  getAttempts?(
+    envelope: Envelope,
+  ): number | undefined | Promise<number | undefined>;
 
   /**
    * Dynamic max deliveries (poison threshold) lookup.
    */
-  getMaxDeliveries?(envelope: Envelope): number | undefined;
+  getMaxDeliveries?(
+    envelope: Envelope,
+  ): number | undefined | Promise<number | undefined>;
 }

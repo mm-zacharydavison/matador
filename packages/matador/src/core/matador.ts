@@ -21,7 +21,7 @@ import type {
   EventClass,
   EventOptions,
 } from '../types/index.js';
-import type { DispatchResult } from './fanout.js';
+import type { SendResult } from './fanout.js';
 import { FanoutEngine } from './fanout.js';
 import type { HandlersState, ShutdownConfig } from './shutdown.js';
 import { ShutdownManager } from './shutdown.js';
@@ -36,11 +36,11 @@ export interface MatadorConfig {
   /** Topology configuration */
   readonly topology: Topology;
 
+  /** Event schema mapping event keys to event classes and subscribers */
+  readonly schema: MatadorSchema;
+
   /** Queues to consume from (empty = no consumption) */
   readonly consumeFrom?: readonly string[] | undefined;
-
-  /** Custom hooks */
-  readonly hooks?: MatadorHooks | undefined;
 
   /** Custom codec (defaults to JSON) */
   readonly codec?: Codec | undefined;
@@ -59,16 +59,10 @@ export interface MatadorConfig {
  * - Transport: Message delivery
  * - Schema: Event-subscriber registry
  * - Pipeline: Message processing
- * - Fanout: Event dispatch
+ * - Fanout: Event sending
  * - Shutdown: Graceful termination
  */
 export class Matador {
-  /**
-   * Creates a new Matador instance.
-   */
-  static create(config: MatadorConfig): Matador {
-    return new Matador(config);
-  }
   private readonly transport: Transport;
   private readonly topology: Topology;
   private readonly schema;
@@ -82,7 +76,14 @@ export class Matador {
   private readonly subscriptions: Subscription[] = [];
   private started = false;
 
-  constructor(config: MatadorConfig) {
+  /**
+   * Creates a new Matador instance.
+   *
+   * @param config - Static configuration (transport, topology, schema, etc.)
+   * @param hooks - Lifecycle hooks for logging, monitoring, and dynamic configuration.
+   *                Passed separately to support NestJS dependency injection.
+   */
+  constructor(config: MatadorConfig, hooks?: MatadorHooks) {
     this.transport = config.transport;
     this.topology = config.topology;
     this.consumeFrom = config.consumeFrom ?? [];
@@ -91,7 +92,10 @@ export class Matador {
     this.schema = SchemaRegistry.create();
     this.codec = config.codec ?? JsonCodec.create();
     this.retryPolicy = config.retryPolicy ?? StandardRetryPolicy.create();
-    this.hooks = SafeHooks.create(config.hooks);
+    this.hooks = SafeHooks.create(hooks);
+
+    // Register schema from config
+    this.registerSchema(config.schema);
 
     // Create pipeline
     this.pipeline = ProcessingPipeline.create({
@@ -221,24 +225,55 @@ export class Matador {
   }
 
   /**
-   * Dispatches an event to all registered subscribers.
+   * Sends an event to all registered subscribers.
+   *
+   * @example
+   * ```typescript
+   * // Pass the event class and data directly
+   * await matador.send(UserCreatedEvent, { userId: '123' });
+   *
+   * // Or pass an event instance
+   * const event = new UserCreatedEvent({ userId: '123' });
+   * await matador.send(event);
+   * ```
    */
-  async dispatch<T>(
-    event: Event<T>,
+  async send<T>(
+    eventClass: EventClass<T>,
+    data: T,
     options?: EventOptions,
-  ): Promise<DispatchResult> {
+  ): Promise<SendResult>;
+  async send<T>(event: Event<T>, options?: EventOptions): Promise<SendResult>;
+  async send<T>(
+    eventOrClass: Event<T> | EventClass<T>,
+    dataOrOptions?: T | EventOptions,
+    maybeOptions?: EventOptions,
+  ): Promise<SendResult> {
     if (!this.started) {
-      throw new NotStartedError('dispatch');
+      throw new NotStartedError('send');
     }
 
     if (!this.shutdownManager.isEnqueueAllowed) {
       throw new ShutdownInProgressError();
     }
 
-    // Get event class from the event's constructor
-    const eventClass = event.constructor as EventClass<T>;
+    // Determine if first arg is an event instance or event class
+    const isEventClass =
+      typeof eventOrClass === 'function' && 'key' in eventOrClass;
 
-    return this.fanout.dispatch(eventClass, event, options);
+    if (isEventClass) {
+      // Called as: send(EventClass, data, options?)
+      const eventClass = eventOrClass as EventClass<T>;
+      const data = dataOrOptions as T;
+      const options = maybeOptions;
+      const event = new eventClass(data);
+      return this.fanout.send(eventClass, event, options);
+    } else {
+      // Called as: send(event, options?)
+      const event = eventOrClass as Event<T>;
+      const options = dataOrOptions as EventOptions | undefined;
+      const eventClass = event.constructor as EventClass<T>;
+      return this.fanout.send(eventClass, event, options);
+    }
   }
 
   /**

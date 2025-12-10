@@ -1,10 +1,10 @@
 // Core
 export type {
-  DispatchError,
-  DispatchResult,
   FanoutConfig,
   HandlersState,
   MatadorConfig,
+  SendError,
+  SendResult,
   ShutdownConfig,
   ShutdownState,
 } from './core/index.js';
@@ -22,6 +22,7 @@ export type {
   DeliveryMode,
   Docket,
   Envelope,
+  EnvelopeOf,
   Event,
   EventClass,
   EventData,
@@ -30,6 +31,7 @@ export type {
   EventStatic,
   Idempotency,
   Importance,
+  JsonRecord,
   Subscriber,
   SubscriberCallback,
   SubscriberDefinition,
@@ -114,6 +116,7 @@ export type {
   SchemaValidationResult,
 } from './schema/index.js';
 export {
+  bind,
   isSchemaEntryTuple,
   SchemaError,
   SchemaRegistry,

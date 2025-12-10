@@ -3,6 +3,17 @@ import type { Envelope } from './envelope.js';
 import type { MatadorEvent } from './event.js';
 
 /**
+ * Helper type to get the envelope type for a subscriber callback.
+ * Extracts the data type from a MatadorEvent and wraps it in an Envelope.
+ *
+ * @example
+ * async callback(envelope: EnvelopeOf<MyEvent>) {
+ *   console.log(envelope.data.someField); // Type-safe access
+ * }
+ */
+export type EnvelopeOf<T extends MatadorEvent> = Envelope<T['data']>;
+
+/**
  * Callback function executed when an event is received.
  * Receives the full envelope containing id, data, and docket.
  */
@@ -54,8 +65,11 @@ export interface SubscriberStub extends SubscriberOptions {
 /**
  * Union type for any subscriber definition (full or stub).
  * This is the type-erased version for use in collections and schema.
+ * Uses `any` because Subscriber<T> is contravariant in T (callback parameter),
+ * making it impossible to assign Subscriber<SpecificEvent> to Subscriber<MatadorEvent<unknown>>.
  */
-export type AnySubscriber = Subscriber<MatadorEvent<unknown>> | SubscriberStub;
+// biome-ignore lint/suspicious/noExplicitAny: Required for variance compatibility in heterogeneous collections
+export type AnySubscriber = Subscriber<MatadorEvent<any>> | SubscriberStub;
 
 /**
  * Type guard to check if a subscriber is a stub.
@@ -71,7 +85,8 @@ export function isSubscriberStub(
  */
 export function isSubscriber(
   subscriber: AnySubscriber,
-): subscriber is Subscriber<MatadorEvent<unknown>> {
+  // biome-ignore lint/suspicious/noExplicitAny: Required for variance compatibility
+): subscriber is Subscriber<MatadorEvent<any>> {
   return 'callback' in subscriber && typeof subscriber.callback === 'function';
 }
 

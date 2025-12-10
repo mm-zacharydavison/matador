@@ -23,19 +23,19 @@ export interface FanoutConfig {
 }
 
 /**
- * Result of dispatching an event.
+ * Result of sending an event.
  */
-export interface DispatchResult {
+export interface SendResult {
   readonly eventKey: string;
-  readonly subscribersDispatched: number;
+  readonly subscribersSent: number;
   readonly subscribersSkipped: number;
-  readonly errors: readonly DispatchError[];
+  readonly errors: readonly SendError[];
 }
 
 /**
- * Error during dispatch.
+ * Error during send.
  */
-export interface DispatchError {
+export interface SendError {
   readonly subscriberName: string;
   readonly queue: string;
   readonly error: Error;
@@ -78,18 +78,18 @@ export class FanoutEngine {
   }
 
   /**
-   * Dispatches an event to all registered subscribers.
+   * Sends an event to all registered subscribers.
    */
-  async dispatch<T>(
+  async send<T>(
     eventClass: EventClass<T>,
     event: Event<T>,
     options: EventOptions = {},
-  ): Promise<DispatchResult> {
+  ): Promise<SendResult> {
     const eventKey = eventClass.key;
     const subscribers = this.schema.getSubscribers(eventKey);
 
-    const errors: DispatchError[] = [];
-    let dispatched = 0;
+    const errors: SendError[] = [];
+    let sent = 0;
     let skipped = 0;
 
     // Load universal metadata
@@ -135,7 +135,7 @@ export class FanoutEngine {
             ? { delay: options.delayMs }
             : undefined,
         );
-        dispatched++;
+        sent++;
 
         await this.hooks.onEnqueueSuccess({
           envelope,
@@ -161,7 +161,7 @@ export class FanoutEngine {
 
     return {
       eventKey,
-      subscribersDispatched: dispatched,
+      subscribersSent: sent,
       subscribersSkipped: skipped,
       errors,
     };

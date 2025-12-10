@@ -121,13 +121,13 @@ export class SafeHooks {
     }
   }
 
-  getQueueConcurrency(queueName: string): number | undefined {
+  async getQueueConcurrency(queueName: string): Promise<number | undefined> {
     if (!this.hooks.getQueueConcurrency) {
       return undefined;
     }
 
     try {
-      return this.hooks.getQueueConcurrency(queueName);
+      return await this.hooks.getQueueConcurrency(queueName);
     } catch (error) {
       this.logger.warn(
         '[Matador] 🟡 Hook getQueueConcurrency threw an error',
@@ -137,39 +137,42 @@ export class SafeHooks {
     }
   }
 
-  getRetryDelay(envelope: Envelope, attemptNumber: number): number | undefined {
+  async getRetryDelay(
+    envelope: Envelope,
+    attemptNumber: number,
+  ): Promise<number | undefined> {
     if (!this.hooks.getRetryDelay) {
       return undefined;
     }
 
     try {
-      return this.hooks.getRetryDelay(envelope, attemptNumber);
+      return await this.hooks.getRetryDelay(envelope, attemptNumber);
     } catch (error) {
       this.logger.warn('[Matador] 🟡 Hook getRetryDelay threw an error', error);
       return undefined;
     }
   }
 
-  getAttempts(envelope: Envelope): number | undefined {
+  async getAttempts(envelope: Envelope): Promise<number | undefined> {
     if (!this.hooks.getAttempts) {
       return undefined;
     }
 
     try {
-      return this.hooks.getAttempts(envelope);
+      return await this.hooks.getAttempts(envelope);
     } catch (error) {
       this.logger.warn('[Matador] 🟡 Hook getAttempts threw an error', error);
       return undefined;
     }
   }
 
-  getMaxDeliveries(envelope: Envelope): number | undefined {
+  async getMaxDeliveries(envelope: Envelope): Promise<number | undefined> {
     if (!this.hooks.getMaxDeliveries) {
       return undefined;
     }
 
     try {
-      return this.hooks.getMaxDeliveries(envelope);
+      return await this.hooks.getMaxDeliveries(envelope);
     } catch (error) {
       this.logger.warn(
         '[Matador] 🟡 Hook getMaxDeliveries threw an error',

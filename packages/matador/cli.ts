@@ -5,9 +5,9 @@
  * Usage: ./cli.ts <path-to-config-file> <path-to-event-file>
  *
  * Config file should export:
- *   - events: Record<string, EventClass> - Map of event keys to event classes
- *   - subscribers: Record<string, AnySubscriber[]> - Map of event keys to subscribers
+ *   - schema: MatadorSchema - Map of event keys to [EventClass, Subscribers[]]
  *   - topology?: Topology - Optional topology (defaults to simple 'events' queue)
+ *   - hooks?: MatadorHooks - Optional hooks
  *
  * Event file should export:
  *   - eventKey: string - The key of the event to dispatch
@@ -16,18 +16,18 @@
  *   - options?: EventOptions - Optional dispatch options (correlationId, metadata, delayMs)
  */
 
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
-  type AnySubscriber,
-  type EventClass,
   type EventOptions,
   type MatadorHooks,
+  type MatadorSchema,
   LocalTransport,
+  Matador,
   type Topology,
+  TopologyBuilder,
   consoleLogger,
-  createMatador,
-  createTopology,
+  isSchemaEntryTuple,
 } from './src/index.js';
 
 // Colors for terminal output
@@ -69,8 +69,7 @@ function logWarning(message: string): void {
 }
 
 interface ConfigExport {
-  events: Record<string, EventClass>;
-  subscribers: Record<string, AnySubscriber[]>;
+  schema: MatadorSchema;
   topology?: Topology;
   hooks?: MatadorHooks;
 }
@@ -101,8 +100,7 @@ ${colors.cyan}Options:${colors.reset}
   --verbose     Show verbose output including all hook logs
 
 ${colors.cyan}Config file exports:${colors.reset}
-  events        Record<string, EventClass> - Map of event keys to event classes
-  subscribers   Record<string, AnySubscriber[]> - Map of event keys to subscribers
+  schema        MatadorSchema - Map of event keys to [EventClass, Subscribers[]]
   topology?     Topology - Optional topology config
   hooks?        MatadorHooks - Optional hooks for logging
 
@@ -166,15 +164,17 @@ async function main(): Promise<void> {
     logInfo(`Loading config from: ${configPath}`);
     config = await loadModule<ConfigExport>(configPath);
 
-    if (!config.events || typeof config.events !== 'object') {
-      throw new Error('Config must export an "events" object');
-    }
-    if (!config.subscribers || typeof config.subscribers !== 'object') {
-      throw new Error('Config must export a "subscribers" object');
+    if (!config.schema || typeof config.schema !== 'object') {
+      throw new Error('Config must export a "schema" object');
     }
 
-    const eventCount = Object.keys(config.events).length;
-    const subscriberCount = Object.values(config.subscribers).flat().length;
+    const eventCount = Object.keys(config.schema).length;
+    const subscriberCount = Object.values(config.schema).reduce((acc, entry) => {
+      if (isSchemaEntryTuple(entry)) {
+        return acc + entry[1].length;
+      }
+      return acc + entry.subscribers.length;
+    }, 0);
     logSuccess(
       `Loaded ${eventCount} event(s) and ${subscriberCount} subscriber(s)`,
     );
@@ -207,14 +207,21 @@ async function main(): Promise<void> {
   }
 
   // Validate event exists in config
-  const EventClass = config.events[eventSpec.eventKey];
-  if (!EventClass) {
+  const schemaEntry = config.schema[eventSpec.eventKey];
+  if (!schemaEntry) {
     logError(`Event "${eventSpec.eventKey}" not found in config`);
-    logInfo(`Available events: ${Object.keys(config.events).join(', ')}`);
+    logInfo(`Available events: ${Object.keys(config.schema).join(', ')}`);
     process.exit(1);
   }
 
-  const subscribers = config.subscribers[eventSpec.eventKey];
+  // Extract EventClass and subscribers from schema entry
+  const EventClass = isSchemaEntryTuple(schemaEntry)
+    ? schemaEntry[0]
+    : schemaEntry.eventClass;
+  const subscribers = isSchemaEntryTuple(schemaEntry)
+    ? schemaEntry[1]
+    : schemaEntry.subscribers;
+
   if (!subscribers || subscribers.length === 0) {
     logWarning(`No subscribers registered for event "${eventSpec.eventKey}"`);
   } else {
@@ -233,7 +240,7 @@ async function main(): Promise<void> {
   // Create topology
   const topology =
     config.topology ??
-    createTopology()
+    TopologyBuilder.create()
       .withNamespace('cli-test')
       .addQueue('events')
       .withoutDeadLetter()
@@ -256,19 +263,16 @@ async function main(): Promise<void> {
     ...config.hooks,
   };
 
-  // Create Matador instance
-  const matador = createMatador({
-    transport,
-    topology,
-    consumeFrom: topology.queues.map((q) => q.name),
+  // Create Matador instance with schema and hooks
+  const matador = new Matador(
+    {
+      transport,
+      topology,
+      schema: config.schema,
+      consumeFrom: topology.queues.map((q) => q.name),
+    },
     hooks,
-  });
-
-  // Register all events and subscribers
-  for (const [eventKey, eventClass] of Object.entries(config.events)) {
-    const subs = config.subscribers[eventKey] ?? [];
-    matador.register(eventClass, subs);
-  }
+  );
 
   try {
     await matador.start();
@@ -288,11 +292,11 @@ async function main(): Promise<void> {
       }
     }
 
-    const result = await matador.dispatch(event, eventSpec.options);
+    const result = await matador.send(event, eventSpec.options);
 
-    logSection('Dispatch Result');
+    logSection('Send Result');
     logInfo(`Event key: ${result.eventKey}`);
-    logInfo(`Subscribers dispatched: ${result.subscribersDispatched}`);
+    logInfo(`Subscribers sent: ${result.subscribersSent}`);
     logInfo(`Subscribers skipped: ${result.subscribersSkipped}`);
 
     if (result.errors.length > 0) {

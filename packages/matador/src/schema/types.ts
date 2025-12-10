@@ -1,47 +1,120 @@
-import type { AnySubscriber, EventClass } from '../types/index.js';
+import type {
+  AnySubscriber,
+  EventClass,
+  MatadorEvent,
+  Subscriber,
+  SubscriberStub,
+} from '../types/index.js';
 
 /**
- * Schema entry for a single event type.
+ * Type-safe schema entry for a single event type (object format).
+ * The type parameter enforces that subscribers match the event type.
  */
-export interface SchemaEntry<T = unknown> {
+export interface SchemaEntry<T extends MatadorEvent = MatadorEvent> {
   /** The event class */
-  readonly eventClass: EventClass<T>;
+  readonly eventClass: EventClass<T['data']>;
 
   /** Subscribers for this event */
+  readonly subscribers: readonly (Subscriber<T> | SubscriberStub)[];
+}
+
+/**
+ * Type-safe schema entry as a tuple: [EventClass, Subscribers[]]
+ * The type parameter enforces that subscribers match the event type.
+ *
+ * @example
+ * ```typescript
+ * const entry: SchemaEntryTuple<UserCreatedEvent> = [
+ *   UserCreatedEvent,
+ *   [createSubscriber<UserCreatedEvent>('handler', async (env) => {})]
+ * ];
+ * ```
+ */
+export type SchemaEntryTuple<T extends MatadorEvent = MatadorEvent> = readonly [
+  eventClass: EventClass<T['data']>,
+  subscribers: readonly (Subscriber<T> | SubscriberStub)[],
+];
+
+/**
+ * Creates a type-safe schema entry tuple.
+ * Ensures that subscribers are compatible with the event class at compile time.
+ *
+ * @example
+ * ```typescript
+ * const schema = {
+ *   [UserCreatedEvent.key]: bind(UserCreatedEvent, [
+ *     createSubscriber<UserCreatedEvent>('send-email', async (env) => {
+ *       console.log(env.data.email); // Type-safe access
+ *     }),
+ *   ]),
+ * } satisfies MatadorSchema;
+ * ```
+ */
+export function bind<T extends MatadorEvent>(
+  eventClass: EventClass<T['data']>,
+  subscribers: readonly (Subscriber<T> | SubscriberStub)[],
+): SchemaEntryTuple<T> {
+  return [eventClass, subscribers] as const;
+}
+
+/**
+ * Minimal type for event class in schema storage.
+ * Only requires the static `key` property for routing.
+ * Constructor constraint is omitted to allow heterogeneous event types.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: Constructor accepts any data type for variance compatibility
+export type AnyEventClass = { readonly key: string; new (data: any): MatadorEvent };
+
+/**
+ * Runtime schema entry stored in MatadorSchema (object format).
+ * Uses AnySubscriber and AnyEventClass to allow heterogeneous event types.
+ * Type safety is enforced at definition time via `schemaEntry()` helper.
+ */
+export interface RuntimeSchemaEntry {
+  readonly eventClass: AnyEventClass;
   readonly subscribers: readonly AnySubscriber[];
 }
 
 /**
- * Schema entry as a tuple: [EventClass, Subscribers[]]
- * This is the compact format for defining event-subscriber relationships.
- *
- * @example
- * ```typescript
- * const schema: MatadorSchema = {
- *   [UserCreatedEvent.key]: [UserCreatedEvent, [emailSubscriber, analyticsSubscriber]],
- *   [OrderPlacedEvent.key]: [OrderPlacedEvent, [invoiceSubscriber]],
- * };
- * ```
+ * Runtime schema tuple stored in MatadorSchema.
+ * Uses AnySubscriber and AnyEventClass to allow heterogeneous event types.
+ * Type safety is enforced at definition time via `schemaEntry()` helper.
  */
-export type SchemaEntryTuple<T = unknown> = readonly [
-  eventClass: EventClass<T>,
+export type RuntimeSchemaEntryTuple = readonly [
+  eventClass: AnyEventClass,
   subscribers: readonly AnySubscriber[],
 ];
 
 /**
  * Matador schema mapping event keys to their definitions.
  * Supports both object format (SchemaEntry) and tuple format (SchemaEntryTuple).
+ *
+ * For type-safe schema definitions, use the `bind` helper function
+ * which ensures subscribers are compatible with their event class.
+ *
+ * @example
+ * ```typescript
+ * // Type-safe with bind helper:
+ * const schema = {
+ *   [UserCreatedEvent.key]: bind(UserCreatedEvent, [emailSubscriber]),
+ * } satisfies MatadorSchema;
+ *
+ * // Or inline (less type-safe):
+ * const schema: MatadorSchema = {
+ *   [UserCreatedEvent.key]: [UserCreatedEvent, [emailSubscriber]],
+ * };
+ * ```
  */
 export type MatadorSchema = {
-  readonly [eventKey: string]: SchemaEntry | SchemaEntryTuple;
+  readonly [eventKey: string]: RuntimeSchemaEntry | RuntimeSchemaEntryTuple;
 };
 
 /**
  * Type guard to check if a schema entry is in tuple format.
  */
 export function isSchemaEntryTuple(
-  entry: SchemaEntry | SchemaEntryTuple,
-): entry is SchemaEntryTuple {
+  entry: RuntimeSchemaEntry | RuntimeSchemaEntryTuple,
+): entry is RuntimeSchemaEntryTuple {
   return Array.isArray(entry);
 }
 

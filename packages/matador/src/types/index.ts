@@ -25,6 +25,7 @@ export { MatadorEvent } from './event.js';
 
 export type {
   AnySubscriber,
+  EnvelopeOf,
   Subscriber,
   SubscriberCallback,
   SubscriberDefinition,

@@ -7,6 +7,7 @@ import {
   LocalTransport,
   createSubscriber,
   TopologyBuilder,
+  type MatadorSchema,
 } from '../../src/index.js';
 
 class UserCreatedEvent extends MatadorEvent {
@@ -77,11 +78,16 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
@@ -90,12 +96,12 @@ describe('Matador Integration Tests', () => {
         email: 'test@example.com',
       });
 
-      const result = await matador.dispatch(event);
+      const result = await matador.send(event);
 
       // Wait for processing
       await matador.waitForIdle(5000);
 
-      expect(result.subscribersDispatched).toBe(1);
+      expect(result.subscribersSent).toBe(1);
       expect(result.errors).toHaveLength(0);
       expect(processedUsers).toContain('user-123');
     });
@@ -128,11 +134,16 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [notifySub, analyticsSub, emailSub]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [notifySub, analyticsSub, emailSub]);
+      });
 
       await matador.start();
 
@@ -141,10 +152,10 @@ describe('Matador Integration Tests', () => {
         email: 'fan@out.com',
       });
 
-      const result = await matador.dispatch(event);
+      const result = await matador.send(event);
       await matador.waitForIdle(5000);
 
-      expect(result.subscribersDispatched).toBe(3);
+      expect(result.subscribersSent).toBe(3);
       expect(notifications).toContain('user-456');
       expect(analytics).toContain('user-456');
       expect(emails).toContain('fan@out.com');
@@ -171,23 +182,27 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [userSub]],
+        [OrderPlacedEvent.key]: [OrderPlacedEvent, [orderSub]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      })
-        .register(UserCreatedEvent, [userSub])
-        .register(OrderPlacedEvent, [orderSub]);
+      });
 
       await matador.start();
 
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({ userId: 'u1', email: 'u1@test.com' }),
       );
-      await matador.dispatch(
+      await matador.send(
         new OrderPlacedEvent({ orderId: 'o1', amount: 100, userId: 'u1' }),
       );
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({ userId: 'u2', email: 'u2@test.com' }),
       );
 
@@ -218,20 +233,20 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-        retry: {
-          maxAttempts: 5,
-          baseDelayMs: 10,
-          maxDelayMs: 100,
-        },
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({ userId: 'retry-user', email: 'retry@test.com' }),
       );
 
@@ -256,15 +271,20 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({
           userId: 'no-retry-user',
           email: 'noretry@test.com',
@@ -295,15 +315,20 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({ userId: 'corr-user', email: 'corr@test.com' }),
         { correlationId: 'request-abc-123' },
       );
@@ -331,15 +356,20 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({
           userId: 'meta-user',
           email: 'meta@test.com',
@@ -382,20 +412,25 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-        shutdown: {
+        shutdownConfig: {
           gracefulTimeoutMs: 5000,
           pollIntervalMs: 50,
         },
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
       // Dispatch event
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({
           userId: 'shutdown-user',
           email: 'shutdown@test.com',
@@ -422,11 +457,16 @@ describe('Matador Integration Tests', () => {
         async () => {},
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
@@ -437,7 +477,7 @@ describe('Matador Integration Tests', () => {
       await shutdownPromise;
 
       await expect(
-        matador.dispatch(
+        matador.send(
           new UserCreatedEvent({ userId: 'late', email: 'late@test.com' }),
         ),
       ).rejects.toThrow();
@@ -467,15 +507,20 @@ describe('Matador Integration Tests', () => {
         { enabled: () => false },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [enabledSub, disabledSub]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [enabledSub, disabledSub]);
+      });
 
       await matador.start();
 
-      const result = await matador.dispatch(
+      const result = await matador.send(
         new UserCreatedEvent({
           userId: 'filter-user',
           email: 'filter@test.com',
@@ -485,7 +530,7 @@ describe('Matador Integration Tests', () => {
       await matador.waitForIdle(2000);
 
       // Only enabled subscriber should be dispatched
-      expect(result.subscribersDispatched).toBe(1);
+      expect(result.subscribersSent).toBe(1);
       expect(processed).toContain('enabled:filter-user');
       expect(processed).not.toContain('disabled:filter-user');
     });
@@ -511,17 +556,22 @@ describe('Matador Integration Tests', () => {
         },
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
       expect(matador.isIdle()).toBe(true);
 
-      await matador.dispatch(
+      await matador.send(
         new UserCreatedEvent({ userId: 'state-user', email: 'state@test.com' }),
       );
 

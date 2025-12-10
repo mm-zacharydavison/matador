@@ -1,4 +1,4 @@
-export type { DispatchError, DispatchResult, FanoutConfig } from './fanout.js';
+export type { SendError, SendResult, FanoutConfig } from './fanout.js';
 export { FanoutEngine } from './fanout.js';
 
 export type {

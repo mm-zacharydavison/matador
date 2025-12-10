@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import type { MatadorSchema } from '../schema/index.js';
 import { TopologyBuilder } from '../topology/builder.js';
 import { LocalTransport } from '../transport/local/local-transport.js';
 import { MatadorEvent, createSubscriber } from '../types/index.js';
@@ -37,21 +38,55 @@ describe('Matador', () => {
   });
 
   describe('configuration', () => {
-    it('should create with minimal config', () => {
+    it('should create with schema in config using constructor', () => {
       const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
         .build();
 
-      matador = Matador.create({ transport, topology });
+      const subscriber = createSubscriber('handle-user', async () => {});
+
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       expect(matador).toBeInstanceOf(Matador);
       expect(matador.isConnected()).toBe(false);
     });
+
+
+    it('should support hooks as second argument for dependency injection', () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      const subscriber = createSubscriber('handle-user', async () => {});
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      const logs: string[] = [];
+      const mockLogger = {
+        debug: (msg: string) => logs.push(`debug: ${msg}`),
+        info: (msg: string) => logs.push(`info: ${msg}`),
+        warn: (msg: string) => logs.push(`warn: ${msg}`),
+        error: (msg: string) => logs.push(`error: ${msg}`),
+      };
+
+      matador = new Matador(
+        { transport, topology, schema },
+        { logger: mockLogger },
+      );
+
+      expect(matador).toBeInstanceOf(Matador);
+    });
   });
 
   describe('registration', () => {
-    it('should register events with subscribers', () => {
+    it('should register events via schema in constructor', () => {
       const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
@@ -61,15 +96,16 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       expect(matador).toBeInstanceOf(Matador);
     });
 
-    it('should support chained registration', () => {
+    it('should support multiple events in schema', () => {
       const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
@@ -82,9 +118,12 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology })
-        .register(UserCreatedEvent, [userSub])
-        .register(OrderPlacedEvent, [orderSub]);
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [userSub]],
+        [OrderPlacedEvent.key]: [OrderPlacedEvent, [orderSub]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       expect(matador).toBeInstanceOf(Matador);
     });
@@ -101,10 +140,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -121,10 +161,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -146,16 +187,17 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [sub1, sub2],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [sub1, sub2]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       expect(matador.start()).rejects.toThrow('Schema validation failed');
     });
   });
 
-  describe('dispatch', () => {
+  describe('send', () => {
     it('should throw if not started', async () => {
       const topology = TopologyBuilder.create()
         .withNamespace('test')
@@ -166,22 +208,23 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       const event = new UserCreatedEvent({
         userId: '123',
         email: 'test@example.com',
       });
 
-      await expect(matador.dispatch(event)).rejects.toThrow(
+      await expect(matador.send(event)).rejects.toThrow(
         'Matador has not been started',
       );
     });
 
-    it('should dispatch events to transport', async () => {
+    it('should send events to transport', async () => {
       const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
@@ -191,10 +234,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -203,9 +247,37 @@ describe('Matador', () => {
         email: 'test@example.com',
       });
 
-      const result = await matador.dispatch(event);
+      const result = await matador.send(event);
 
-      expect(result.subscribersDispatched).toBe(1);
+      expect(result.subscribersSent).toBe(1);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should send events using class + data shorthand', async () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      const subscriber = createSubscriber('handle-user',
+        async () => {},
+      );
+
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
+
+      await matador.start();
+
+      // Use the shorthand: send(EventClass, data)
+      const result = await matador.send(UserCreatedEvent, {
+        userId: '123',
+        email: 'test@example.com',
+      });
+
+      expect(result.subscribersSent).toBe(1);
       expect(result.errors).toHaveLength(0);
     });
 
@@ -219,10 +291,11 @@ describe('Matador', () => {
       const sub2 = createSubscriber('sub-2', async () => {});
       const sub3 = createSubscriber('sub-3', async () => {});
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [sub1, sub2, sub3],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [sub1, sub2, sub3]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -231,12 +304,12 @@ describe('Matador', () => {
         email: 'test@example.com',
       });
 
-      const result = await matador.dispatch(event);
+      const result = await matador.send(event);
 
-      expect(result.subscribersDispatched).toBe(3);
+      expect(result.subscribersSent).toBe(3);
     });
 
-    it('should include correlation ID in dispatch', async () => {
+    it('should include correlation ID in send', async () => {
       const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
@@ -246,10 +319,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -258,11 +332,11 @@ describe('Matador', () => {
         email: 'test@example.com',
       });
 
-      const result = await matador.dispatch(event, {
+      const result = await matador.send(event, {
         correlationId: 'request-456',
       });
 
-      expect(result.subscribersDispatched).toBe(1);
+      expect(result.subscribersSent).toBe(1);
     });
   });
 
@@ -277,10 +351,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
       await matador.shutdown();
@@ -298,10 +373,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
       await matador.shutdown();
@@ -310,7 +386,7 @@ describe('Matador', () => {
       expect(matador.isConnected()).toBe(false);
     });
 
-    it('should reject dispatch after shutdown initiated', async () => {
+    it('should reject send after shutdown initiated', async () => {
       const topology = TopologyBuilder.create()
         .withNamespace('test')
         .addQueue('events')
@@ -320,10 +396,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -335,10 +412,10 @@ describe('Matador', () => {
         email: 'test@example.com',
       });
 
-      // Dispatch should fail during/after shutdown
+      // Send should fail during/after shutdown
       await shutdownPromise;
 
-      expect(matador.dispatch(event)).rejects.toThrow();
+      expect(matador.send(event)).rejects.toThrow();
     });
   });
 
@@ -353,10 +430,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -373,10 +451,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -397,10 +476,11 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({ transport, topology }).register(
-        UserCreatedEvent,
-        [subscriber],
-      );
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
 
       await matador.start();
 
@@ -421,11 +501,16 @@ describe('Matador', () => {
         async () => {},
       );
 
-      matador = Matador.create({
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({
         transport,
         topology,
+        schema,
         consumeFrom: ['events'],
-      }).register(UserCreatedEvent, [subscriber]);
+      });
 
       await matador.start();
 
