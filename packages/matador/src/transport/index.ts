@@ -32,8 +32,11 @@ export {
 
 export { LocalTransport } from './local/local-transport.js';
 
-export type { FallbackTransportConfig } from './fallback/fallback-transport.js';
-export { FallbackTransport } from './fallback/fallback-transport.js';
+export type {
+  MultiTransportConfig,
+  MultiTransportHooks,
+} from './multi/multi-transport.js';
+export { MultiTransport } from './multi/multi-transport.js';
 
 export type { RabbitMQTransportConfig } from './rabbitmq/rabbitmq-transport.js';
 export { RabbitMQTransport } from './rabbitmq/rabbitmq-transport.js';

@@ -3,30 +3,30 @@ import type { TransportFallbackContext } from '../../hooks/index.js';
 import type { Topology } from '../../topology/types.js';
 import { createEnvelope } from '../../types/index.js';
 import { LocalTransport } from '../local/local-transport.js';
-import { FallbackTransport } from './fallback-transport.js';
+import { MultiTransport } from './multi-transport.js';
 
-describe('FallbackTransport', () => {
+describe('MultiTransport', () => {
   let primary: LocalTransport;
-  let fallback: LocalTransport;
-  let transport: FallbackTransport;
+  let secondary: LocalTransport;
+  let transport: MultiTransport;
 
   beforeEach(() => {
     primary = new LocalTransport();
-    fallback = new LocalTransport();
-    transport = new FallbackTransport({
-      transports: [primary, fallback],
+    secondary = new LocalTransport();
+    transport = new MultiTransport({
+      transports: [primary, secondary],
     });
   });
 
   describe('constructor', () => {
     it('should throw if no transports provided', () => {
-      expect(() => new FallbackTransport({ transports: [] })).toThrow(
+      expect(() => new MultiTransport({ transports: [] })).toThrow(
         'At least one transport is required',
       );
     });
 
     it('should set name based on transport names', () => {
-      expect(transport.name).toBe('fallback(local,local)');
+      expect(transport.name).toBe('multi(local,local)');
     });
 
     it('should use primary transport capabilities', () => {
@@ -35,6 +35,22 @@ describe('FallbackTransport', () => {
 
     it('should expose primary transport', () => {
       expect(transport.primary).toBe(primary);
+    });
+
+    it('should expose all transports', () => {
+      expect(transport.transports).toEqual([primary, secondary]);
+    });
+
+    it('should default fallbackEnabled to true', () => {
+      expect(transport.fallbackEnabled).toBe(true);
+    });
+
+    it('should allow disabling fallback', () => {
+      const noFallback = new MultiTransport({
+        transports: [primary, secondary],
+        fallbackEnabled: false,
+      });
+      expect(noFallback.fallbackEnabled).toBe(false);
     });
   });
 
@@ -48,7 +64,7 @@ describe('FallbackTransport', () => {
 
       expect(transport.isConnected()).toBe(true);
       expect(primary.isConnected()).toBe(true);
-      expect(fallback.isConnected()).toBe(true);
+      expect(secondary.isConnected()).toBe(true);
     });
 
     it('should disconnect all transports', async () => {
@@ -57,7 +73,7 @@ describe('FallbackTransport', () => {
 
       expect(transport.isConnected()).toBe(false);
       expect(primary.isConnected()).toBe(false);
-      expect(fallback.isConnected()).toBe(false);
+      expect(secondary.isConnected()).toBe(false);
     });
   });
 
@@ -82,7 +98,7 @@ describe('FallbackTransport', () => {
 
       // Both transports should have the queue
       expect(primary.getQueueSize('test.events')).toBe(0);
-      expect(fallback.getQueueSize('test.events')).toBe(0);
+      expect(secondary.getQueueSize('test.events')).toBe(0);
     });
   });
 
@@ -96,15 +112,15 @@ describe('FallbackTransport', () => {
       await transport.send('test-queue', envelope);
 
       expect(primary.getQueueSize('test-queue')).toBe(1);
-      expect(fallback.getQueueSize('test-queue')).toBe(0);
+      expect(secondary.getQueueSize('test-queue')).toBe(0);
     });
 
     it('should not call onFallback when primary succeeds', async () => {
       const onFallback = mock(() => {});
-      const transportWithCallback = new FallbackTransport({
-        transports: [primary, fallback],
-        onFallback,
-      });
+      const transportWithCallback = new MultiTransport(
+        { transports: [primary, secondary] },
+        { onFallback },
+      );
       await transportWithCallback.connect();
 
       const envelope = createTestEnvelope();
@@ -126,15 +142,15 @@ describe('FallbackTransport', () => {
       const envelope = createTestEnvelope();
       await transport.send('test-queue', envelope);
 
-      expect(fallback.getQueueSize('test-queue')).toBe(1);
+      expect(secondary.getQueueSize('test-queue')).toBe(1);
     });
 
     it('should call onFallback when fallback is used', async () => {
       const fallbackContexts: TransportFallbackContext[] = [];
-      const transportWithCallback = new FallbackTransport({
-        transports: [primary, fallback],
-        onFallback: (ctx) => fallbackContexts.push(ctx),
-      });
+      const transportWithCallback = new MultiTransport(
+        { transports: [primary, secondary] },
+        { onFallback: (ctx) => fallbackContexts.push(ctx) },
+      );
       await transportWithCallback.connect();
 
       // Make primary fail
@@ -154,7 +170,7 @@ describe('FallbackTransport', () => {
 
     it('should throw when all transports fail', async () => {
       await primary.disconnect();
-      await fallback.disconnect();
+      await secondary.disconnect();
 
       const envelope = createTestEnvelope();
       await expect(transport.send('test-queue', envelope)).rejects.toThrow(
@@ -164,19 +180,52 @@ describe('FallbackTransport', () => {
 
     it('should try transports in order', async () => {
       const third = new LocalTransport();
-      const multiTransport = new FallbackTransport({
-        transports: [primary, fallback, third],
+      const multiTransport = new MultiTransport({
+        transports: [primary, secondary, third],
       });
       await multiTransport.connect();
 
-      // Make primary and fallback fail
+      // Make primary and secondary fail
       await primary.disconnect();
-      await fallback.disconnect();
+      await secondary.disconnect();
 
       const envelope = createTestEnvelope();
       await multiTransport.send('test-queue', envelope);
 
       expect(third.getQueueSize('test-queue')).toBe(1);
+    });
+
+    it('should not fallback when fallbackEnabled is false', async () => {
+      const noFallback = new MultiTransport({
+        transports: [primary, secondary],
+        fallbackEnabled: false,
+      });
+      await noFallback.connect();
+
+      // Make primary fail
+      await primary.disconnect();
+
+      const envelope = createTestEnvelope();
+      await expect(noFallback.send('test-queue', envelope)).rejects.toThrow(
+        'is not connected',
+      );
+
+      // Secondary should not have received the message
+      expect(secondary.getQueueSize('test-queue')).toBe(0);
+    });
+
+    it('should send to primary when fallbackEnabled is false and primary succeeds', async () => {
+      const noFallback = new MultiTransport({
+        transports: [primary, secondary],
+        fallbackEnabled: false,
+      });
+      await noFallback.connect();
+
+      const envelope = createTestEnvelope();
+      await noFallback.send('test-queue', envelope);
+
+      expect(primary.getQueueSize('test-queue')).toBe(1);
+      expect(secondary.getQueueSize('test-queue')).toBe(0);
     });
   });
 
@@ -198,10 +247,10 @@ describe('FallbackTransport', () => {
       expect(receivedMessages).toHaveLength(1);
     });
 
-    it('should receive messages that fell back to fallback transport', async () => {
+    it('should receive messages that fell back to secondary transport', async () => {
       const receivedMessages: unknown[] = [];
 
-      // Subscribe through FallbackTransport
+      // Subscribe through MultiTransport
       await transport.subscribe('test-queue', async (envelope) => {
         receivedMessages.push(envelope);
       });
@@ -209,11 +258,11 @@ describe('FallbackTransport', () => {
       // Make primary fail for sends
       await primary.disconnect();
 
-      // Send through FallbackTransport - should fall back to memory
+      // Send through MultiTransport - should fall back to secondary
       const envelope = createTestEnvelope();
       await transport.send('test-queue', envelope);
 
-      // Message went to fallback transport, subscriber should still receive it
+      // Message went to secondary transport, subscriber should still receive it
       expect(receivedMessages).toHaveLength(1);
       expect((receivedMessages[0] as { id: string }).id).toBe(envelope.id);
     });

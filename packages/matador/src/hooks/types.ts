@@ -121,7 +121,7 @@ export interface MatadorHooks {
 
   /**
    * Called when transport fallback occurs during send.
-   * Only fires when using FallbackTransport.
+   * Only fires when using MultiTransport with fallbackEnabled=true.
    */
   onTransportFallback?(context: TransportFallbackContext): void | Promise<void>;
 

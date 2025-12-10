@@ -27,17 +27,51 @@ function getSourceTransport(receipt: MessageReceipt): Transport | undefined {
 }
 
 /**
- * Configuration for FallbackTransport.
+ * Configuration for MultiTransport.
  */
-export interface FallbackTransportConfig {
+export interface MultiTransportConfig {
   /**
-   * Ordered list of transports to try.
-   * First transport is primary, rest are fallbacks tried in order.
+   * Ordered list of transports.
+   * First transport is primary, rest are used as fallbacks when primary fails
+   * (if fallback is enabled), or can be explicitly selected via the getDesiredBackend hook.
    */
   readonly transports: readonly Transport[];
 
   /**
-   * Called when a fallback transport is used successfully.
+   * Whether to automatically try fallback transports when the primary/selected fails.
+   * When true (default), send() will try each transport in order until one succeeds.
+   * When false, send() will only use the selected transport and throw immediately on failure.
+   *
+   * @default true
+   */
+  readonly fallbackEnabled?: boolean;
+}
+
+/**
+ * Hooks for MultiTransport.
+ */
+export interface MultiTransportHooks {
+  /**
+   * Hook to dynamically select which backend to use.
+   * Return the transport name (e.g., 'local', 'rabbitmq') or undefined to use primary.
+   *
+   * @example
+   * ```typescript
+   * getDesiredBackend: async () => {
+   *   if (process.env.SANDBOX === 'true') return 'local';
+   *   const backend = await runtimeConfig.get('events.backend');
+   *   return backend || 'rabbitmq';
+   * }
+   * ```
+   */
+  readonly getDesiredBackend?: () =>
+    | string
+    | undefined
+    | Promise<string | undefined>;
+
+  /**
+   * Called when a fallback transport is used successfully after the selected one fails.
+   * Only called when fallbackEnabled is true.
    */
   readonly onFallback?: (context: TransportFallbackContext) => void;
 }
@@ -54,38 +88,43 @@ function mergeCapabilities(
     throw new Error('At least one transport is required');
   }
 
-  // For fallback scenarios, we use primary's capabilities since that's
+  // For multi-transport scenarios, we use primary's capabilities since that's
   // what we'll use for subscriptions and most operations
   return primary.capabilities;
 }
 
 /**
- * A transport wrapper that tries multiple transports in order for send operations.
+ * A transport wrapper that manages multiple transports.
  *
+ * Features:
  * - All transports are connected upfront
- * - Every send() tries the primary transport first, then fallbacks in order
- * - Subscriptions and other operations use the primary transport only
+ * - send() tries transports in order until one succeeds (fallback behavior)
+ * - Specific transport can be selected via getDesiredBackend hook
+ * - Subscriptions are created on ALL transports
  *
  * @example
  * ```typescript
- * const transport = new FallbackTransport({
- *   transports: [rabbitMQTransport, memoryTransport],
- *   onFallback: (ctx) => console.warn(`Fallback to ${ctx.successTransport}`),
- * });
+ * const transport = new MultiTransport(
+ *   { transports: [rabbitMQTransport, localTransport] },
+ *   { onFallback: (ctx) => console.warn(`Fallback to ${ctx.successTransport}`) },
+ * );
  * ```
  */
-export class FallbackTransport implements Transport {
+export class MultiTransport implements Transport {
   readonly name: string;
   readonly capabilities: TransportCapabilities;
   readonly primary: Transport;
 
-  private readonly transports: readonly Transport[];
-  private readonly onFallback:
-    | ((context: TransportFallbackContext) => void)
-    | undefined;
+  /** All available transports, in order of preference (primary first). */
+  readonly transports: readonly Transport[];
+
+  /** Whether fallback to secondary transports is enabled. */
+  readonly fallbackEnabled: boolean;
+
+  private readonly hooks: MultiTransportHooks;
   private connected = false;
 
-  constructor(config: FallbackTransportConfig) {
+  constructor(config: MultiTransportConfig, hooks: MultiTransportHooks = {}) {
     const primary = config.transports[0];
     if (!primary) {
       throw new Error('At least one transport is required');
@@ -93,8 +132,9 @@ export class FallbackTransport implements Transport {
 
     this.primary = primary;
     this.transports = config.transports;
-    this.onFallback = config.onFallback;
-    this.name = `fallback(${this.transports.map((t) => t.name).join(',')})`;
+    this.fallbackEnabled = config.fallbackEnabled ?? true;
+    this.hooks = hooks;
+    this.name = `multi(${this.transports.map((t) => t.name).join(',')})`;
     this.capabilities = mergeCapabilities(this.transports);
   }
 
@@ -116,7 +156,7 @@ export class FallbackTransport implements Transport {
   }
 
   async applyTopology(topology: Topology): Promise<void> {
-    // Apply topology to all transports so fallbacks are ready
+    // Apply topology to all transports so they're all ready
     await Promise.all(this.transports.map((t) => t.applyTopology(topology)));
   }
 
@@ -125,16 +165,28 @@ export class FallbackTransport implements Transport {
     envelope: Envelope,
     options?: SendOptions,
   ): Promise<void> {
+    // Determine which transport to use
+    const selectedTransport = await this.selectTransport();
+
+    // If fallback is disabled, only use selected transport
+    if (!this.fallbackEnabled) {
+      await selectedTransport.send(queue, envelope, options);
+      return;
+    }
+
+    // Build transport order: selected first, then others
+    const transportOrder = this.getTransportOrder(selectedTransport);
+
     const errors: Error[] = [];
     let lastFailedTransportName: string | undefined;
 
-    for (const transport of this.transports) {
+    for (const transport of transportOrder) {
       try {
         await transport.send(queue, envelope, options);
 
         // If we had a previous failure, notify about fallback
-        if (errors.length > 0 && lastFailedTransportName && this.onFallback) {
-          this.onFallback({
+        if (errors.length > 0 && lastFailedTransportName && this.hooks.onFallback) {
+          this.hooks.onFallback({
             envelope,
             queue,
             failedTransport: lastFailedTransportName,
@@ -156,13 +208,52 @@ export class FallbackTransport implements Transport {
     throw new AllTransportsFailedError(queue, errors);
   }
 
+  /**
+   * Selects the transport to use based on the getDesiredBackend hook.
+   */
+  private async selectTransport(): Promise<Transport> {
+    if (!this.hooks.getDesiredBackend) {
+      return this.primary;
+    }
+
+    try {
+      const desiredBackend = await this.hooks.getDesiredBackend();
+      if (!desiredBackend) {
+        return this.primary;
+      }
+
+      const selected = this.transports.find((t) => t.name === desiredBackend);
+      if (selected) {
+        return selected;
+      }
+
+      // Desired backend not found, use primary
+      return this.primary;
+    } catch {
+      // Hook threw, use primary
+      return this.primary;
+    }
+  }
+
+  /**
+   * Returns transports in order, with the selected transport first.
+   */
+  private getTransportOrder(selected: Transport): readonly Transport[] {
+    if (selected === this.primary) {
+      return this.transports;
+    }
+
+    // Put selected first, then the rest (excluding selected)
+    return [selected, ...this.transports.filter((t) => t !== selected)];
+  }
+
   async subscribe(
     queue: string,
     handler: MessageHandler,
     options?: SubscribeOptions,
   ): Promise<Subscription> {
     // Subscribe on ALL transports so messages are processed regardless of
-    // which transport they were enqueued to (primary or fallback)
+    // which transport they were enqueued to
     const subscriptions = await Promise.all(
       this.transports.map((transport) => {
         // Wrap handler to tag receipts with source transport

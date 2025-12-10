@@ -12,9 +12,9 @@ import {
   type StartedRabbitMQContainer,
 } from '@testcontainers/rabbitmq';
 import type { TransportFallbackContext } from '../../src/hooks/index.js';
-import { FallbackTransport } from '../../src/transport/fallback/fallback-transport.js';
 import type { Subscription } from '../../src/transport/index.js';
 import { LocalTransport } from '../../src/transport/local/local-transport.js';
+import { MultiTransport } from '../../src/transport/multi/multi-transport.js';
 import { RabbitMQTransport } from '../../src/transport/rabbitmq/rabbitmq-transport.js';
 import {
   createTestEnvelope,
@@ -24,7 +24,7 @@ import {
 // Skip tests if docker is not available
 const SKIP_E2E = process.env.SKIP_E2E_TESTS === 'true';
 
-describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
+describe.skipIf(SKIP_E2E)('MultiTransport E2E', () => {
   let container: StartedRabbitMQContainer;
   let connectionUrl: string;
 
@@ -46,7 +46,7 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
   describe('fallback to local transport when RabbitMQ fails', () => {
     let rabbitTransport: RabbitMQTransport;
     let localTransport: LocalTransport;
-    let fallbackTransport: FallbackTransport;
+    let multiTransport: MultiTransport;
     let subscriptions: Subscription[];
     let fallbackEvents: TransportFallbackContext[];
 
@@ -61,12 +61,12 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
 
       localTransport = new LocalTransport();
 
-      fallbackTransport = new FallbackTransport({
-        transports: [rabbitTransport, localTransport],
-        onFallback: (ctx) => fallbackEvents.push(ctx),
-      });
+      multiTransport = new MultiTransport(
+        { transports: [rabbitTransport, localTransport] },
+        { onFallback: (ctx) => fallbackEvents.push(ctx) },
+      );
 
-      await fallbackTransport.connect();
+      await multiTransport.connect();
     });
 
     afterEach(async () => {
@@ -75,29 +75,29 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
           await sub.unsubscribe();
         }
       }
-      if (fallbackTransport.isConnected()) {
-        await fallbackTransport.disconnect();
+      if (multiTransport.isConnected()) {
+        await multiTransport.disconnect();
       }
     });
 
     it('should send to RabbitMQ when healthy', async () => {
       const topology = createTestTopology(`healthy-${Date.now()}`);
-      await fallbackTransport.applyTopology(topology);
+      await multiTransport.applyTopology(topology);
       const queueName = `${topology.namespace}.events`;
 
       const receivedMessages: string[] = [];
 
-      const subscription = await fallbackTransport.subscribe(
+      const subscription = await multiTransport.subscribe(
         queueName,
         async (env, receipt) => {
           receivedMessages.push(env.id);
-          await fallbackTransport.complete(receipt);
+          await multiTransport.complete(receipt);
         },
       );
       subscriptions.push(subscription);
 
       const envelope = createTestEnvelope();
-      await fallbackTransport.send(queueName, envelope);
+      await multiTransport.send(queueName, envelope);
 
       await waitFor(() => receivedMessages.length >= 1, 5000);
 
@@ -107,17 +107,17 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
 
     it('should fallback to memory transport when RabbitMQ send fails', async () => {
       const topology = createTestTopology(`fallback-${Date.now()}`);
-      await fallbackTransport.applyTopology(topology);
+      await multiTransport.applyTopology(topology);
       const queueName = `${topology.namespace}.events`;
 
       const receivedMessages: string[] = [];
 
       // Subscribe BEFORE disconnecting RabbitMQ
-      const subscription = await fallbackTransport.subscribe(
+      const subscription = await multiTransport.subscribe(
         queueName,
         async (env, receipt) => {
           receivedMessages.push(env.id);
-          await fallbackTransport.complete(receipt);
+          await multiTransport.complete(receipt);
         },
       );
       subscriptions.push(subscription);
@@ -127,7 +127,7 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
 
       // Send should fallback to memory transport
       const envelope = createTestEnvelope();
-      await fallbackTransport.send(queueName, envelope);
+      await multiTransport.send(queueName, envelope);
 
       // Message should be processed by subscriber on memory transport
       await waitFor(() => receivedMessages.length >= 1, 5000);
@@ -143,16 +143,16 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
 
     it('should process multiple messages via fallback', async () => {
       const topology = createTestTopology(`multi-${Date.now()}`);
-      await fallbackTransport.applyTopology(topology);
+      await multiTransport.applyTopology(topology);
       const queueName = `${topology.namespace}.events`;
 
       const receivedMessages: string[] = [];
 
-      const subscription = await fallbackTransport.subscribe(
+      const subscription = await multiTransport.subscribe(
         queueName,
         async (env, receipt) => {
           receivedMessages.push(env.id);
-          await fallbackTransport.complete(receipt);
+          await multiTransport.complete(receipt);
         },
       );
       subscriptions.push(subscription);
@@ -168,7 +168,7 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
       ];
 
       for (const env of envelopes) {
-        await fallbackTransport.send(queueName, env);
+        await multiTransport.send(queueName, env);
       }
 
       await waitFor(() => receivedMessages.length >= 3, 5000);
@@ -181,23 +181,23 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
 
     it('should handle mixed success/fallback sends', async () => {
       const topology = createTestTopology(`mixed-${Date.now()}`);
-      await fallbackTransport.applyTopology(topology);
+      await multiTransport.applyTopology(topology);
       const queueName = `${topology.namespace}.events`;
 
       const receivedMessages: string[] = [];
 
-      const subscription = await fallbackTransport.subscribe(
+      const subscription = await multiTransport.subscribe(
         queueName,
         async (env, receipt) => {
           receivedMessages.push(env.id);
-          await fallbackTransport.complete(receipt);
+          await multiTransport.complete(receipt);
         },
       );
       subscriptions.push(subscription);
 
       // Send first message to RabbitMQ (should succeed)
       const env1 = createTestEnvelope({ id: 'rabbit-msg' });
-      await fallbackTransport.send(queueName, env1);
+      await multiTransport.send(queueName, env1);
 
       await waitFor(() => receivedMessages.includes('rabbit-msg'), 5000);
 
@@ -206,7 +206,7 @@ describe.skipIf(SKIP_E2E)('FallbackTransport E2E', () => {
 
       // Send second message (should fallback to memory)
       const env2 = createTestEnvelope({ id: 'memory-msg' });
-      await fallbackTransport.send(queueName, env2);
+      await multiTransport.send(queueName, env2);
 
       await waitFor(() => receivedMessages.includes('memory-msg'), 5000);
 
