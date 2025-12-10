@@ -53,20 +53,6 @@ export interface HandlersState {
  * 4. Disconnect transport
  */
 export class ShutdownManager {
-  static create(
-    getEnqueueCount: () => number,
-    stopReceiving: () => Promise<void>,
-    disconnectTransport: () => Promise<void>,
-    config?: Partial<ShutdownConfig>,
-  ): ShutdownManager {
-    return new ShutdownManager(
-      getEnqueueCount,
-      stopReceiving,
-      disconnectTransport,
-      config,
-    );
-  }
-
   private _state: ShutdownState = 'running';
   private readonly config: ShutdownConfig;
   private eventsBeingProcessed = 0;

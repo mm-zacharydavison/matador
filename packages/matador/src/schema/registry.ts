@@ -34,10 +34,6 @@ export class SchemaError extends Error implements HasDescription {
  * Registry for managing event-subscriber relationships.
  */
 export class SchemaRegistry {
-  static create(): SchemaRegistry {
-    return new SchemaRegistry();
-  }
-
   private readonly entries = new Map<string, SchemaEntry>();
   private readonly aliases = new Map<string, string>();
 

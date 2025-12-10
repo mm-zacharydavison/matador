@@ -66,13 +66,6 @@ interface V1Body {
  * - v1 message format compatibility built-in
  */
 export class RabbitMQCodec implements HeaderAwareCodec {
-  /**
-   * Creates a new RabbitMQ codec instance.
-   */
-  static create(): RabbitMQCodec {
-    return new RabbitMQCodec();
-  }
-
   readonly contentType = 'application/json';
 
   encode(envelope: Envelope): EncodedMessage {

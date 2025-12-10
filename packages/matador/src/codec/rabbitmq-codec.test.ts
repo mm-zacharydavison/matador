@@ -379,7 +379,7 @@ const V1_MESSAGE_FIXTURES: V1MessageFixture[] = [
 ];
 
 describe('RabbitMQCodec', () => {
-  const codec = RabbitMQCodec.create();
+  const codec = new RabbitMQCodec();
 
   describe('v1 to v2 translation', () => {
     for (const fixture of V1_MESSAGE_FIXTURES) {

@@ -66,13 +66,6 @@ interface ActiveConsumer {
  * RabbitMQ transport implementation using amqplib.
  */
 export class RabbitMQTransport implements Transport {
-  /**
-   * Creates a new RabbitMQ transport instance.
-   */
-  static create(config: RabbitMQTransportConfig): RabbitMQTransport {
-    return new RabbitMQTransport(config);
-  }
-
   readonly name = 'rabbitmq';
 
   private _capabilities: TransportCapabilities = {

@@ -51,10 +51,6 @@ export interface SendError {
  * 4. Sending to appropriate queues via transport
  */
 export class FanoutEngine {
-  static create(config: FanoutConfig): FanoutEngine {
-    return new FanoutEngine(config);
-  }
-
   private readonly transport: Transport;
   private readonly schema: SchemaRegistry;
   private readonly hooks: SafeHooks;
@@ -116,6 +112,7 @@ export class FanoutEngine {
       // Create envelope
       const envelope = createEnvelope({
         eventKey,
+        eventDescription: eventClass.description,
         targetSubscriber: subscriber.name,
         data: event.data,
         importance: subscriber.importance ?? 'should-investigate',

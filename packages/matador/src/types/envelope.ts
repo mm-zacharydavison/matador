@@ -24,6 +24,9 @@ export interface Docket {
   /** Event key for routing */
   readonly eventKey: string;
 
+  /** Human-readable description of the event (for observability/logging) */
+  readonly eventDescription?: string | undefined;
+
   /** Target subscriber name for 1:1 routing */
   readonly targetSubscriber: string;
 
@@ -72,7 +75,7 @@ export interface Docket {
  */
 type DocketCreateFields = Pick<
   Docket,
-  'eventKey' | 'targetSubscriber' | 'importance' | 'correlationId'
+  'eventKey' | 'eventDescription' | 'targetSubscriber' | 'importance' | 'correlationId'
 >;
 
 /**
@@ -123,6 +126,9 @@ export function createEnvelope<T>(
     docket: {
       // Routing
       eventKey: options.eventKey,
+      ...(options.eventDescription !== undefined && {
+        eventDescription: options.eventDescription,
+      }),
       targetSubscriber: options.targetSubscriber,
       ...(options.delayMs !== undefined &&
         options.delayMs > 0 && {

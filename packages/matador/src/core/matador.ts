@@ -89,16 +89,16 @@ export class Matador {
     this.consumeFrom = config.consumeFrom ?? [];
 
     // Initialize components
-    this.schema = SchemaRegistry.create();
-    this.codec = config.codec ?? JsonCodec.create();
-    this.retryPolicy = config.retryPolicy ?? StandardRetryPolicy.create();
-    this.hooks = SafeHooks.create(hooks);
+    this.schema = new SchemaRegistry();
+    this.codec = config.codec ?? new JsonCodec();
+    this.retryPolicy = config.retryPolicy ?? new StandardRetryPolicy();
+    this.hooks = new SafeHooks(hooks);
 
     // Register schema from config
     this.registerSchema(config.schema);
 
     // Create pipeline
-    this.pipeline = ProcessingPipeline.create({
+    this.pipeline = new ProcessingPipeline({
       transport: this.transport,
       schema: this.schema,
       codec: this.codec,
@@ -108,7 +108,7 @@ export class Matador {
 
     // Create fanout engine
     const defaultQueue = this.topology.queues[0]?.name ?? 'default';
-    this.fanout = FanoutEngine.create({
+    this.fanout = new FanoutEngine({
       transport: this.transport,
       schema: this.schema,
       hooks: this.hooks,
@@ -117,7 +117,7 @@ export class Matador {
     });
 
     // Create shutdown manager
-    this.shutdownManager = ShutdownManager.create(
+    this.shutdownManager = new ShutdownManager(
       () => this.fanout.eventsBeingEnqueuedCount,
       () => this.stopReceiving(),
       () => this.transport.disconnect(),

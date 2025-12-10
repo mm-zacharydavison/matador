@@ -54,7 +54,7 @@ describe.skipIf(SKIP_E2E)('MultiTransport E2E', () => {
       subscriptions = [];
       fallbackEvents = [];
 
-      rabbitTransport = RabbitMQTransport.create({
+      rabbitTransport = new RabbitMQTransport({
         url: connectionUrl,
         quorumQueues: false,
       });

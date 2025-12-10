@@ -114,7 +114,7 @@ const transportFactories: TransportFactory[] = [
       if (!rabbitConnectionUrl) {
         throw new Error('RabbitMQ container not started');
       }
-      return RabbitMQTransport.create({
+      return new RabbitMQTransport({
         url: rabbitConnectionUrl,
         quorumQueues: false, // Use classic queues for faster tests
         defaultPrefetch: 10,

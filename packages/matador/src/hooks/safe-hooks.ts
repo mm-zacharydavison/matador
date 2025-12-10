@@ -18,10 +18,6 @@ import {
  * All hooks become safe to call and will catch any errors internally.
  */
 export class SafeHooks {
-  static create(hooks?: MatadorHooks): SafeHooks {
-    return new SafeHooks(hooks);
-  }
-
   private readonly hooks: MatadorHooks;
 
   /** The logger instance used by Matador. */
