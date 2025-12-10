@@ -227,4 +227,3 @@ export class SchemaRegistry {
     return undefined;
   }
 }
-

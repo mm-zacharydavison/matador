@@ -62,7 +62,6 @@ export class TopologyBuilder {
     return this;
   }
 
-
   /**
    * Adds a queue to the topology.
    */
@@ -198,4 +197,3 @@ export class TopologyBuilder {
     };
   }
 }
-

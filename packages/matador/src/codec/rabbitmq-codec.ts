@@ -170,9 +170,7 @@ export class RabbitMQCodec implements HeaderAwareCodec {
     if (typeof value !== 'object' || value === null) return false;
     const obj = value as Record<string, unknown>;
     return (
-      typeof obj['id'] === 'string' &&
-      'data' in obj &&
-      !('key' in obj) // Distinguish from v1 which also has 'data'
+      typeof obj['id'] === 'string' && 'data' in obj && !('key' in obj) // Distinguish from v1 which also has 'data'
     );
   }
 
@@ -289,7 +287,9 @@ export class RabbitMQCodec implements HeaderAwareCodec {
       // Observability
       importance: importance as Docket['importance'],
       ...(correlationId !== undefined && { correlationId }),
-      ...(Object.keys(mergedMetadata).length > 0 && { metadata: mergedMetadata }),
+      ...(Object.keys(mergedMetadata).length > 0 && {
+        metadata: mergedMetadata,
+      }),
     };
 
     return {
@@ -341,4 +341,3 @@ export class RabbitMQCodec implements HeaderAwareCodec {
     return value;
   }
 }
-

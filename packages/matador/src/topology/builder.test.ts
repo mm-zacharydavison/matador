@@ -13,7 +13,9 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject empty namespace', () => {
-      const builder = TopologyBuilder.create().withNamespace('').addQueue('events');
+      const builder = TopologyBuilder.create()
+        .withNamespace('')
+        .addQueue('events');
 
       expect(() => builder.build()).toThrow(TopologyValidationError);
     });
@@ -83,7 +85,9 @@ describe('TopologyBuilder', () => {
     });
 
     it('should reject empty queue name', () => {
-      const builder = TopologyBuilder.create().withNamespace('test').addQueue('');
+      const builder = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('');
 
       expect(() => builder.build()).toThrow('Queue name cannot be empty');
     });
@@ -220,7 +224,9 @@ describe('TopologyBuilder', () => {
     });
 
     it('should return empty array for valid topology', () => {
-      const builder = TopologyBuilder.create().withNamespace('test').addQueue('events');
+      const builder = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events');
 
       const issues = builder.validate();
       expect(issues).toHaveLength(0);

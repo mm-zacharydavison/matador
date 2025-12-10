@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import {
-  MatadorEvent,
   DoRetry,
   DontRetry,
-  Matador,
   LocalTransport,
-  createSubscriber,
-  TopologyBuilder,
+  Matador,
+  MatadorEvent,
   type MatadorSchema,
+  TopologyBuilder,
+  createSubscriber,
 } from '../../src/index.js';
 
 class UserCreatedEvent extends MatadorEvent {
@@ -72,11 +72,9 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('process-user',
-        async ({ data }) => {
-          processedUsers.push(data.userId);
-        },
-      );
+      const subscriber = createSubscriber('process-user', async ({ data }) => {
+        processedUsers.push(data.userId);
+      });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -116,26 +114,32 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const notifySub = createSubscriber('send-notification',
+      const notifySub = createSubscriber(
+        'send-notification',
         async ({ data }) => {
           notifications.push(data.userId);
         },
       );
 
-      const analyticsSub = createSubscriber('track-analytics',
+      const analyticsSub = createSubscriber(
+        'track-analytics',
         async ({ data }) => {
           analytics.push(data.userId);
         },
       );
 
-      const emailSub = createSubscriber('send-welcome-email',
+      const emailSub = createSubscriber(
+        'send-welcome-email',
         async ({ data }) => {
           emails.push(data.email);
         },
       );
 
       const schema: MatadorSchema = {
-        [UserCreatedEvent.key]: [UserCreatedEvent, [notifySub, analyticsSub, emailSub]],
+        [UserCreatedEvent.key]: [
+          UserCreatedEvent,
+          [notifySub, analyticsSub, emailSub],
+        ],
       };
 
       matador = new Matador({
@@ -170,17 +174,13 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const userSub = createSubscriber('process-user',
-        async ({ data }) => {
-          users.push(data.userId);
-        },
-      );
+      const userSub = createSubscriber('process-user', async ({ data }) => {
+        users.push(data.userId);
+      });
 
-      const orderSub = createSubscriber('process-order',
-        async ({ data }) => {
-          orders.push(data.orderId);
-        },
-      );
+      const orderSub = createSubscriber('process-order', async ({ data }) => {
+        orders.push(data.orderId);
+      });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [userSub]],
@@ -224,14 +224,12 @@ describe('Matador Integration Tests', () => {
         .withRetry({ enabled: true, defaultDelayMs: 10, maxDelayMs: 100 })
         .build();
 
-      const subscriber = createSubscriber('flaky-subscriber',
-        async () => {
-          attempts++;
-          if (attempts < maxAttempts) {
-            throw new DoRetry('Temporary failure');
-          }
-        },
-      );
+      const subscriber = createSubscriber('flaky-subscriber', async () => {
+        attempts++;
+        if (attempts < maxAttempts) {
+          throw new DoRetry('Temporary failure');
+        }
+      });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -264,7 +262,8 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('permanent-fail-subscriber',
+      const subscriber = createSubscriber(
+        'permanent-fail-subscriber',
         async () => {
           attempts++;
           throw new DontRetry('Permanent failure');
@@ -307,7 +306,8 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('track-correlation',
+      const subscriber = createSubscriber(
+        'track-correlation',
         async ({ docket }) => {
           if (docket.correlationId) {
             correlationIds.push(docket.correlationId);
@@ -348,7 +348,8 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('capture-metadata',
+      const subscriber = createSubscriber(
+        'capture-metadata',
         async ({ docket }) => {
           if (docket.metadata) {
             receivedMetadata.push(docket.metadata);
@@ -403,7 +404,8 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('slow-subscriber',
+      const subscriber = createSubscriber(
+        'slow-subscriber',
         async ({ data }) => {
           processingStarted = true;
           // Simulate slow processing
@@ -453,9 +455,7 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('test-subscriber',
-        async () => {},
-      );
+      const subscriber = createSubscriber('test-subscriber', async () => {});
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -493,14 +493,16 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const enabledSub = createSubscriber('enabled-subscriber',
+      const enabledSub = createSubscriber(
+        'enabled-subscriber',
         async ({ data }) => {
           processed.push(`enabled:${data.userId}`);
         },
         { enabled: () => true },
       );
 
-      const disabledSub = createSubscriber('disabled-subscriber',
+      const disabledSub = createSubscriber(
+        'disabled-subscriber',
         async ({ data }) => {
           processed.push(`disabled:${data.userId}`);
         },
@@ -545,16 +547,14 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('state-subscriber',
-        async () => {
-          // Check state while processing
-          const state = matador.getHandlersState();
-          if (state.eventsBeingProcessed > 0) {
-            wasNotIdle = true;
-          }
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        },
-      );
+      const subscriber = createSubscriber('state-subscriber', async () => {
+        // Check state while processing
+        const state = matador.getHandlersState();
+        if (state.eventsBeingProcessed > 0) {
+          wasNotIdle = true;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],

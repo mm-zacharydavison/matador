@@ -11,7 +11,7 @@ import { ProcessingPipeline } from '../pipeline/index.js';
 import type { RetryPolicy } from '../retry/index.js';
 import { StandardRetryPolicy } from '../retry/index.js';
 import type { MatadorSchema } from '../schema/index.js';
-import { isSchemaEntryTuple, SchemaRegistry } from '../schema/index.js';
+import { SchemaRegistry, isSchemaEntryTuple } from '../schema/index.js';
 import type { Topology } from '../topology/index.js';
 import { getQualifiedQueueName } from '../topology/index.js';
 import type { Subscription, Transport } from '../transport/index.js';
@@ -332,4 +332,3 @@ export class Matador {
     this.subscriptions.length = 0;
   }
 }
-

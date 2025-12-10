@@ -20,10 +20,10 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   type EventOptions,
-  type MatadorHooks,
-  type MatadorSchema,
   LocalTransport,
   Matador,
+  type MatadorHooks,
+  type MatadorSchema,
   type Topology,
   TopologyBuilder,
   consoleLogger,
@@ -169,12 +169,15 @@ async function main(): Promise<void> {
     }
 
     const eventCount = Object.keys(config.schema).length;
-    const subscriberCount = Object.values(config.schema).reduce((acc, entry) => {
-      if (isSchemaEntryTuple(entry)) {
-        return acc + entry[1].length;
-      }
-      return acc + entry.subscribers.length;
-    }, 0);
+    const subscriberCount = Object.values(config.schema).reduce(
+      (acc, entry) => {
+        if (isSchemaEntryTuple(entry)) {
+          return acc + entry[1].length;
+        }
+        return acc + entry.subscribers.length;
+      },
+      0,
+    );
     logSuccess(
       `Loaded ${eventCount} event(s) and ${subscriberCount} subscriber(s)`,
     );

@@ -74,4 +74,3 @@ export class JsonCodec implements Codec {
     return true;
   }
 }
-

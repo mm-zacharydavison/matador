@@ -112,4 +112,7 @@ export type EventData<E extends Event<unknown>> = E extends Event<infer T>
 /**
  * Type helper to get the event class type.
  */
-export type EventClass<T = unknown> = EventStatic<T> & (new (data: T) => Event<T>);
+export type EventClass<T = unknown> = EventStatic<T> &
+  (new (
+    data: T,
+  ) => Event<T>);

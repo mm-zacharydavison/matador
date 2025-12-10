@@ -54,7 +54,8 @@ export class OrderPlacedEvent extends MatadorEvent {
 // Subscribers
 // ============================================================================
 
-const sendWelcomeEmail = createSubscriber('send-welcome-email',
+const sendWelcomeEmail = createSubscriber(
+  'send-welcome-email',
   async ({ data, docket }) => {
     console.log(`  📧 Sending welcome email to ${data.email}`);
     console.log(`     User: ${data.name} (${data.userId})`);
@@ -65,14 +66,16 @@ const sendWelcomeEmail = createSubscriber('send-welcome-email',
   { idempotent: 'yes', importance: 'should-investigate' },
 );
 
-const trackUserAnalytics = createSubscriber('track-user-analytics',
+const trackUserAnalytics = createSubscriber(
+  'track-user-analytics',
   async ({ data }) => {
     console.log(`  📊 Tracking analytics for new user: ${data.userId}`);
   },
   { idempotent: 'yes', importance: 'can-ignore' },
 );
 
-const processOrder = createSubscriber('process-order',
+const processOrder = createSubscriber(
+  'process-order',
   async ({ data }) => {
     console.log(`  📦 Processing order ${data.orderId}`);
     console.log(`     Amount: $${data.amount.toFixed(2)}`);
@@ -81,7 +84,8 @@ const processOrder = createSubscriber('process-order',
   { idempotent: 'no', importance: 'must-investigate' },
 );
 
-const sendOrderConfirmation = createSubscriber('send-order-confirmation',
+const sendOrderConfirmation = createSubscriber(
+  'send-order-confirmation',
   async ({ data }) => {
     console.log(`  📧 Sending order confirmation for ${data.orderId}`);
   },
@@ -97,8 +101,14 @@ const sendOrderConfirmation = createSubscriber('send-order-confirmation',
  * Uses the tuple format: [EventClass, Subscribers[]]
  */
 export const schema: MatadorSchema = {
-  [UserCreatedEvent.key]: [UserCreatedEvent, [sendWelcomeEmail, trackUserAnalytics]],
-  [OrderPlacedEvent.key]: [OrderPlacedEvent, [processOrder, sendOrderConfirmation]],
+  [UserCreatedEvent.key]: [
+    UserCreatedEvent,
+    [sendWelcomeEmail, trackUserAnalytics],
+  ],
+  [OrderPlacedEvent.key]: [
+    OrderPlacedEvent,
+    [processOrder, sendOrderConfirmation],
+  ],
 };
 
 export const topology: Topology = TopologyBuilder.create()

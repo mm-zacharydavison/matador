@@ -89,9 +89,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
       const subscription = await transport.subscribe(
         queueName,
         async (env, receipt) => {
-          receivedOrder.push(
-            (env.data as { priority: number }).priority,
-          );
+          receivedOrder.push((env.data as { priority: number }).priority);
           await transport.complete(receipt);
         },
       );

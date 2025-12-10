@@ -63,7 +63,10 @@ export function bind<T extends MatadorEvent>(
  * Constructor constraint is omitted to allow heterogeneous event types.
  */
 // biome-ignore lint/suspicious/noExplicitAny: Constructor accepts any data type for variance compatibility
-export type AnyEventClass = { readonly key: string; new (data: any): MatadorEvent };
+export type AnyEventClass = {
+  readonly key: string;
+  new (data: any): MatadorEvent;
+};
 
 /**
  * Runtime schema entry stored in MatadorSchema (object format).

@@ -56,7 +56,9 @@ export const defaultRetryConfig: StandardRetryPolicyConfig = {
  * 7. Default → retry with exponential backoff
  */
 export class StandardRetryPolicy implements RetryPolicy {
-  static create(config?: Partial<StandardRetryPolicyConfig>): StandardRetryPolicy {
+  static create(
+    config?: Partial<StandardRetryPolicyConfig>,
+  ): StandardRetryPolicy {
     return new StandardRetryPolicy(config);
   }
 
@@ -154,4 +156,3 @@ export class StandardRetryPolicy implements RetryPolicy {
     return Math.min(delay, this.config.maxDelay);
   }
 }
-

@@ -756,4 +756,3 @@ export class RabbitMQTransport implements Transport {
     return attemptNumber;
   }
 }
-

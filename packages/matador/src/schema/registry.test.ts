@@ -30,9 +30,7 @@ describe('SchemaRegistry', () => {
 
   describe('register', () => {
     it('should register an event with subscribers', () => {
-      const subscriber = createSubscriber('test-subscriber',
-        async () => {},
-      );
+      const subscriber = createSubscriber('test-subscriber', async () => {});
 
       registry.register(TestEvent, [subscriber]);
 
@@ -41,9 +39,7 @@ describe('SchemaRegistry', () => {
     });
 
     it('should throw when registering duplicate event without override', () => {
-      const subscriber = createSubscriber('test-subscriber',
-        async () => {},
-      );
+      const subscriber = createSubscriber('test-subscriber', async () => {});
 
       registry.register(TestEvent, [subscriber]);
 
@@ -65,9 +61,7 @@ describe('SchemaRegistry', () => {
     });
 
     it('should register aliases', () => {
-      const subscriber = createSubscriber('test-subscriber',
-        async () => {},
-      );
+      const subscriber = createSubscriber('test-subscriber', async () => {});
 
       registry.register(AliasedEvent, [subscriber]);
 
@@ -88,9 +82,7 @@ describe('SchemaRegistry', () => {
       }
 
       const sub1 = createSubscriber('sub-1', async () => {});
-      const sub2 = createSubscriber('sub-2',
-        async () => {},
-      );
+      const sub2 = createSubscriber('sub-2', async () => {});
 
       registry.register(AliasedEvent, [sub1]);
 
@@ -102,9 +94,7 @@ describe('SchemaRegistry', () => {
 
   describe('getEventClass', () => {
     it('should return event class by key', () => {
-      const subscriber = createSubscriber('test-subscriber',
-        async () => {},
-      );
+      const subscriber = createSubscriber('test-subscriber', async () => {});
       registry.register(TestEvent, [subscriber]);
 
       const eventClass = registry.getEventClass('test.event');
@@ -113,9 +103,7 @@ describe('SchemaRegistry', () => {
     });
 
     it('should return event class by alias', () => {
-      const subscriber = createSubscriber('test-subscriber',
-        async () => {},
-      );
+      const subscriber = createSubscriber('test-subscriber', async () => {});
       registry.register(AliasedEvent, [subscriber]);
 
       const eventClass = registry.getEventClass('user.created');
@@ -236,12 +224,8 @@ describe('SchemaRegistry', () => {
     });
 
     it('should detect duplicate subscriber names', () => {
-      const sub1 = createSubscriber('duplicate-name',
-        async () => {},
-      );
-      const sub2 = createSubscriber('duplicate-name',
-        async () => {},
-      );
+      const sub1 = createSubscriber('duplicate-name', async () => {});
+      const sub2 = createSubscriber('duplicate-name', async () => {});
 
       registry.register(TestEvent, [sub1, sub2]);
 
