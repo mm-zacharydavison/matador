@@ -115,18 +115,18 @@ describe('MultiTransport', () => {
       expect(secondary.getQueueSize('test-queue')).toBe(0);
     });
 
-    it('should not call onFallback when primary succeeds', async () => {
-      const onFallback = mock(() => {});
+    it('should not call onEnqueueFallback when primary succeeds', async () => {
+      const onEnqueueFallback = mock(() => {});
       const transportWithCallback = new MultiTransport(
         { transports: [primary, secondary] },
-        { onFallback },
+        { onEnqueueFallback },
       );
       await transportWithCallback.connect();
 
       const envelope = createTestEnvelope();
       await transportWithCallback.send('test-queue', envelope);
 
-      expect(onFallback).not.toHaveBeenCalled();
+      expect(onEnqueueFallback).not.toHaveBeenCalled();
     });
   });
 
@@ -145,11 +145,11 @@ describe('MultiTransport', () => {
       expect(secondary.getQueueSize('test-queue')).toBe(1);
     });
 
-    it('should call onFallback when fallback is used', async () => {
+    it('should call onEnqueueFallback when fallback is used', async () => {
       const fallbackContexts: TransportFallbackContext[] = [];
       const transportWithCallback = new MultiTransport(
         { transports: [primary, secondary] },
-        { onFallback: (ctx) => fallbackContexts.push(ctx) },
+        { onEnqueueFallback: (ctx) => fallbackContexts.push(ctx) },
       );
       await transportWithCallback.connect();
 

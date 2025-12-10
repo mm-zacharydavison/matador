@@ -63,7 +63,7 @@ describe.skipIf(SKIP_E2E)('MultiTransport E2E', () => {
 
       multiTransport = new MultiTransport(
         { transports: [rabbitTransport, localTransport] },
-        { onFallback: (ctx) => fallbackEvents.push(ctx) },
+        { onEnqueueFallback: (ctx) => fallbackEvents.push(ctx) },
       );
 
       await multiTransport.connect();

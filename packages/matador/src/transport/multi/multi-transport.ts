@@ -73,7 +73,7 @@ export interface MultiTransportHooks {
    * Called when a fallback transport is used successfully after the selected one fails.
    * Only called when fallbackEnabled is true.
    */
-  readonly onFallback?: (context: TransportFallbackContext) => void;
+  readonly onEnqueueFallback?: (context: TransportFallbackContext) => void;
 }
 
 /**
@@ -106,7 +106,7 @@ function mergeCapabilities(
  * ```typescript
  * const transport = new MultiTransport(
  *   { transports: [rabbitMQTransport, localTransport] },
- *   { onFallback: (ctx) => console.warn(`Fallback to ${ctx.successTransport}`) },
+ *   { onEnqueueFallback: (ctx) => console.warn(`Fallback to ${ctx.successTransport}`) },
  * );
  * ```
  */
@@ -185,8 +185,8 @@ export class MultiTransport implements Transport {
         await transport.send(queue, envelope, options);
 
         // If we had a previous failure, notify about fallback
-        if (errors.length > 0 && lastFailedTransportName && this.hooks.onFallback) {
-          this.hooks.onFallback({
+        if (errors.length > 0 && lastFailedTransportName && this.hooks.onEnqueueFallback) {
+          this.hooks.onEnqueueFallback({
             envelope,
             queue,
             failedTransport: lastFailedTransportName,

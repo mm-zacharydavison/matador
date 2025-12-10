@@ -77,6 +77,9 @@ export {
   hasNativeDeadLetter,
   LocalTransport,
   RabbitMQTransport,
+  MultiTransport,
+  type MultiTransportConfig,
+  type MultiTransportHooks,
   supportsDeliveryMode,
   supportsDelayedMessages,
 } from './transport/index.js';
