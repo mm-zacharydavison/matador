@@ -116,10 +116,12 @@ export type {
   SchemaEntry,
   SchemaEntryTuple,
   SchemaIssue,
+  SchemaPlugin,
   SchemaValidationResult,
 } from './schema/index.js';
 export {
   bind,
+  installPlugins,
   isSchemaEntryTuple,
   SchemaError,
   SchemaRegistry,

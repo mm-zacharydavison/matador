@@ -145,3 +145,73 @@ export interface SchemaIssue {
   readonly eventKey: string;
   readonly message: string;
 }
+
+/**
+ * Plugin definition for adding subscribers to multiple events.
+ */
+export interface SchemaPlugin {
+  /** The subscriber to add to events */
+  readonly subscriber: AnySubscriber;
+
+  /** Event keys to exclude from this plugin */
+  readonly exclusions?: readonly string[];
+}
+
+/**
+ * Installs plugins (global subscribers) into a schema.
+ * Each plugin subscriber is added to all events except those in its exclusions list.
+ *
+ * @param schema - The base schema to extend
+ * @param plugins - Array of plugins to install
+ * @returns A new schema with plugin subscribers added
+ *
+ * @example
+ * ```typescript
+ * const baseSchema: MatadorSchema = {
+ *   [UserCreatedEvent.key]: [UserCreatedEvent, [sendWelcomeEmail]],
+ *   [OrderPlacedEvent.key]: [OrderPlacedEvent, [processOrder]],
+ *   [ChatMessageSent.key]: [ChatMessageSent, [notifyRecipient]],
+ * };
+ *
+ * const schema = installPlugins(baseSchema, [
+ *   {
+ *     subscriber: logToBigQuery,
+ *     exclusions: [ChatMessageSent.key], // Don't log chat messages
+ *   },
+ *   {
+ *     subscriber: trackAnalytics,
+ *     // No exclusions - added to all events
+ *   },
+ * ]);
+ * ```
+ */
+export function installPlugins(
+  schema: MatadorSchema,
+  plugins: readonly SchemaPlugin[],
+): MatadorSchema {
+  const result: Record<string, RuntimeSchemaEntry | RuntimeSchemaEntryTuple> =
+    {};
+
+  for (const [eventKey, entry] of Object.entries(schema)) {
+    // Get existing event class and subscribers
+    const [eventClass, existingSubscribers] = isSchemaEntryTuple(entry)
+      ? [entry[0], entry[1]]
+      : [entry.eventClass, entry.subscribers];
+
+    // Collect subscribers to add from plugins
+    const pluginSubscribers: AnySubscriber[] = [];
+    for (const plugin of plugins) {
+      if (!plugin.exclusions?.includes(eventKey)) {
+        pluginSubscribers.push(plugin.subscriber);
+      }
+    }
+
+    // Create new entry with combined subscribers
+    result[eventKey] = [
+      eventClass,
+      [...existingSubscribers, ...pluginSubscribers],
+    ];
+  }
+
+  return result;
+}

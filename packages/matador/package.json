@@ -19,7 +19,7 @@
     }
   },
   "bin": {
-    "matador-cli": "./cli.ts"
+    "matador": "./cli.ts"
   },
   "scripts": {
     "build": "tsup",

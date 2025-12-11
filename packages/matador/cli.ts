@@ -2,12 +2,19 @@
 /**
  * Matador CLI - Quick local testing of your Matador config
  *
- * Usage: ./cli.ts <path-to-config-file> <path-to-event-file>
+ * Usage:
+ *   bunx matador send <config-file> <event-file> [options]
+ *   bunx matador send-test-event <config-file>
+ *
+ * Commands:
+ *   send             Send an event using a config and event file
+ *   send-test-event  Send a test event using the examples in config
  *
  * Config file should export:
  *   - schema: MatadorSchema - Map of event keys to [EventClass, Subscribers[]]
  *   - topology?: Topology - Optional topology (defaults to simple 'events' queue)
  *   - hooks?: MatadorHooks - Optional hooks
+ *   - testEvent?: { eventKey, data, before?, options? } - Test event for send-test-event command
  *
  * Event file should export:
  *   - eventKey: string - The key of the event to dispatch
@@ -68,10 +75,18 @@ function logWarning(message: string): void {
   log(`⚠ ${message}`, 'yellow');
 }
 
+interface TestEventSpec {
+  eventKey: string;
+  data: unknown;
+  before?: unknown;
+  options?: EventOptions;
+}
+
 interface ConfigExport {
   schema: MatadorSchema;
   topology?: Topology;
   hooks?: MatadorHooks;
+  testEvent?: TestEventSpec;
 }
 
 interface EventExport {
@@ -86,12 +101,12 @@ function printUsage(): void {
 ${colors.bold}Matador CLI${colors.reset} - Quick local testing of your Matador config
 
 ${colors.cyan}Usage:${colors.reset}
-  ./cli.ts <config-file> <event-file>
-  bun cli.ts <config-file> <event-file>
+  bunx matador send <config-file> <event-file> [options]
+  bunx matador send-test-event <config-file>
 
-${colors.cyan}Arguments:${colors.reset}
-  config-file   Path to your Matador config file (TypeScript/JavaScript)
-  event-file    Path to your event file (TypeScript/JavaScript/JSON)
+${colors.cyan}Commands:${colors.reset}
+  send             Send an event using a config and event file
+  send-test-event  Send a test event defined in the config file
 
 ${colors.cyan}Options:${colors.reset}
   --help, -h    Show this help message
@@ -103,6 +118,7 @@ ${colors.cyan}Config file exports:${colors.reset}
   schema        MatadorSchema - Map of event keys to [EventClass, Subscribers[]]
   topology?     Topology - Optional topology config
   hooks?        MatadorHooks - Optional hooks for logging
+  testEvent?    { eventKey, data, before?, options? } - Test event for send-test-event
 
 ${colors.cyan}Event file exports:${colors.reset}
   eventKey      string - The key of the event to dispatch
@@ -111,8 +127,9 @@ ${colors.cyan}Event file exports:${colors.reset}
   options?      EventOptions - Optional dispatch options
 
 ${colors.cyan}Examples:${colors.reset}
-  ./cli.ts ./my-config.ts ./test-event.ts
-  bun cli.ts ./config/matador.ts ./events/user-created.json --verbose
+  bunx matador send ./my-config.ts ./test-event.ts
+  bunx matador send ./config.ts ./event.json --verbose --timeout 10000
+  bunx matador send-test-event ./my-config.ts
 `);
 }
 
@@ -128,34 +145,11 @@ async function loadModule<T>(filePath: string): Promise<T> {
   return module.default ?? module;
 }
 
-async function main(): Promise<void> {
-  const { values, positionals } = parseArgs({
-    args: Bun.argv.slice(2),
-    options: {
-      help: { type: 'boolean', short: 'h' },
-      'dry-run': { type: 'boolean' },
-      timeout: { type: 'string', default: '5000' },
-      verbose: { type: 'boolean' },
-    },
-    allowPositionals: true,
-  });
-
-  if (values.help) {
-    printUsage();
-    process.exit(0);
-  }
-
-  if (positionals.length < 2) {
-    logError('Missing required arguments');
-    printUsage();
-    process.exit(1);
-  }
-
-  const [configPath, eventPath] = positionals;
-  const timeout = Number.parseInt(values.timeout ?? '5000', 10);
-  const dryRun = values['dry-run'] ?? false;
-  const verbose = values.verbose ?? false;
-
+async function runSend(
+  configPath: string,
+  eventPath: string,
+  options: { dryRun: boolean; timeout: number; verbose: boolean },
+): Promise<void> {
   logSection('Loading Configuration');
 
   // Load config file
@@ -209,6 +203,60 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  await dispatchEvent(config, eventSpec, options);
+}
+
+async function runSendTestEvent(
+  configPath: string,
+  options: { dryRun: boolean; timeout: number; verbose: boolean },
+): Promise<void> {
+  logSection('Loading Configuration');
+
+  // Load config file
+  let config: ConfigExport;
+  try {
+    logInfo(`Loading config from: ${configPath}`);
+    config = await loadModule<ConfigExport>(configPath);
+
+    if (!config.schema || typeof config.schema !== 'object') {
+      throw new Error('Config must export a "schema" object');
+    }
+
+    if (!config.testEvent) {
+      throw new Error(
+        'Config must export a "testEvent" object for send-test-event command',
+      );
+    }
+
+    const eventCount = Object.keys(config.schema).length;
+    const subscriberCount = Object.values(config.schema).reduce(
+      (acc, entry) => {
+        if (isSchemaEntryTuple(entry)) {
+          return acc + entry[1].length;
+        }
+        return acc + entry.subscribers.length;
+      },
+      0,
+    );
+    logSuccess(
+      `Loaded ${eventCount} event(s) and ${subscriberCount} subscriber(s)`,
+    );
+    logSuccess(`Test event key: ${config.testEvent.eventKey}`);
+  } catch (err) {
+    logError(
+      `Failed to load config: ${err instanceof Error ? err.message : err}`,
+    );
+    process.exit(1);
+  }
+
+  await dispatchEvent(config, config.testEvent, options);
+}
+
+async function dispatchEvent(
+  config: ConfigExport,
+  eventSpec: EventExport,
+  options: { dryRun: boolean; timeout: number; verbose: boolean },
+): Promise<void> {
   // Validate event exists in config
   const schemaEntry = config.schema[eventSpec.eventKey];
   if (!schemaEntry) {
@@ -231,7 +279,7 @@ async function main(): Promise<void> {
     logInfo(`Subscribers: ${subscribers.map((s) => s.name).join(', ')}`);
   }
 
-  if (dryRun) {
+  if (options.dryRun) {
     logSection('Dry Run Complete');
     logSuccess('Config and event validated successfully');
     logInfo('Use without --dry-run to actually dispatch the event');
@@ -254,7 +302,7 @@ async function main(): Promise<void> {
 
   // Create hooks for logging
   const hooks: MatadorHooks = {
-    logger: verbose ? consoleLogger : undefined,
+    logger: options.verbose ? consoleLogger : undefined,
     onWorkerSuccess: (ctx) => {
       logSuccess(`[${ctx.subscriber.name}] processed in ${ctx.durationMs}ms`);
     },
@@ -285,7 +333,7 @@ async function main(): Promise<void> {
     const event = new EventClass(eventSpec.data, eventSpec.before);
     logInfo(`Dispatching: ${eventSpec.eventKey}`);
 
-    if (verbose) {
+    if (options.verbose) {
       logInfo(`Data: ${JSON.stringify(eventSpec.data, null, 2)}`);
       if (eventSpec.before) {
         logInfo(`Before: ${JSON.stringify(eventSpec.before, null, 2)}`);
@@ -311,12 +359,12 @@ async function main(): Promise<void> {
 
     // Wait for processing
     logSection('Processing');
-    const idle = await matador.waitForIdle(timeout);
+    const idle = await matador.waitForIdle(options.timeout);
 
     if (idle) {
       logSuccess('All subscribers finished processing');
     } else {
-      logWarning(`Timed out after ${timeout}ms waiting for processing`);
+      logWarning(`Timed out after ${options.timeout}ms waiting for processing`);
     }
 
     await matador.shutdown();
@@ -333,6 +381,71 @@ async function main(): Promise<void> {
   } catch (err) {
     logError(`Error: ${err instanceof Error ? err.message : err}`);
     await matador.shutdown().catch(() => {});
+    process.exit(1);
+  }
+}
+
+async function main(): Promise<void> {
+  const args = Bun.argv.slice(2);
+
+  // Check for help flag first
+  if (args.includes('--help') || args.includes('-h') || args.length === 0) {
+    printUsage();
+    process.exit(0);
+  }
+
+  const command = args[0];
+
+  if (command === 'send') {
+    const { values, positionals } = parseArgs({
+      args: args.slice(1),
+      options: {
+        'dry-run': { type: 'boolean' },
+        timeout: { type: 'string', default: '5000' },
+        verbose: { type: 'boolean' },
+      },
+      allowPositionals: true,
+    });
+
+    if (positionals.length < 2) {
+      logError('Missing required arguments: <config-file> <event-file>');
+      logInfo('Usage: bunx matador send <config-file> <event-file> [options]');
+      process.exit(1);
+    }
+
+    const [configPath, eventPath] = positionals;
+    await runSend(configPath!, eventPath!, {
+      dryRun: values['dry-run'] ?? false,
+      timeout: Number.parseInt(values.timeout ?? '5000', 10),
+      verbose: values.verbose ?? false,
+    });
+  } else if (command === 'send-test-event') {
+    const { values, positionals } = parseArgs({
+      args: args.slice(1),
+      options: {
+        'dry-run': { type: 'boolean' },
+        timeout: { type: 'string', default: '5000' },
+        verbose: { type: 'boolean' },
+      },
+      allowPositionals: true,
+    });
+
+    if (positionals.length < 1) {
+      logError('Missing required argument: <config-file>');
+      logInfo('Usage: bunx matador send-test-event <config-file> [options]');
+      process.exit(1);
+    }
+
+    const [configPath] = positionals;
+    await runSendTestEvent(configPath!, {
+      dryRun: values['dry-run'] ?? false,
+      timeout: Number.parseInt(values.timeout ?? '5000', 10),
+      verbose: values.verbose ?? false,
+    });
+  } else {
+    logError(`Unknown command: ${command}`);
+    logInfo('Available commands: send, send-test-event');
+    logInfo('Run "bunx matador --help" for usage information');
     process.exit(1);
   }
 }

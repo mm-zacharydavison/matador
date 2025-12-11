@@ -7,9 +7,10 @@ export type {
   SchemaEntry,
   SchemaEntryTuple,
   SchemaIssue,
+  SchemaPlugin,
   SchemaValidationResult,
 } from './types.js';
 
-export { bind, isSchemaEntryTuple } from './types.js';
+export { bind, installPlugins, isSchemaEntryTuple } from './types.js';
 
 export { SchemaError, SchemaRegistry } from './registry.js';

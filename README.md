@@ -4,6 +4,46 @@
 
 An opinionated, batteries-included framework for using event transports (e.g. `RabbitMQ`) with a lot of useful conventions built in.
 
+## Table of Contents
+
+- [Vision](#vision)
+- [History](#history)
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [Define a MatadorEvent](#define-a-matadorevent)
+  - [Define a Subscriber](#define-a-subscriber)
+  - [Define a Schema](#define-a-schema)
+  - [Instantiate Matador and send events](#instantiate-matador-and-send-events)
+- [Concepts](#concepts)
+  - [MatadorEvent](#matadorevent)
+  - [Subscriber](#subscriber)
+  - [Schema](#schema)
+  - [Envelope](#envelope)
+  - [Docket](#docket)
+  - [Fanout](#fanout)
+  - [Transport](#transport)
+  - [Topology](#topology)
+  - [Codec](#codec)
+  - [Config](#config)
+  - [Hooks](#hooks)
+  - [idempotent](#idempotent)
+- [Why it works this way](#why-it-works-this-way)
+  - [Sending one message will result in a unique message per subscriber](#sending-one-message-will-result-in-a-unique-message-per-subscriber)
+  - [You are working in a monorepo](#you-are-working-in-a-monorepo)
+  - [You want at-least-once delivery](#you-want-at-least-once-delivery)
+- [Logging](#logging)
+- [Errors](#errors)
+- [Other features](#other-features)
+  - [universalMetadata](#universalmetadata)
+  - [Schema plugins](#schema-plugins)
+  - [DoRetry & DontRetry](#doretry--dontretry)
+  - [LocalTransport](#localtransport)
+  - [MultiTransport](#multitransport)
+  - [enabled() hook for Subscriber](#enabled-hook-for-subscriber)
+  - [importance](#importance)
+  - [Delayed messages](#delayed-messages)
+- [CLI](#cli)
+
 # Vision
 
 Matador aims to provide a ready-to-use framework for dispatching messages and moving work off your API servers onto workers.
@@ -542,37 +582,26 @@ loadUniversalMetadata: () => {
 ### Schema plugins
 
 Sometimes, you want to run a subscriber on every event in your _schema_.
-Instead of defining the subscriber mapping for every event, you can create a utility function to add subscribers across all events:
+Instead of defining the subscriber mapping for every event, you can use `installPlugins` to add global subscribers:
 
 ```ts
-// Helper function to add a subscriber to all events
-function withGlobalSubscriber<T extends MatadorSchema>(
-  schema: T,
-  subscriber: AnySubscriber,
-  exclusions: string[] = [],
-): T {
-  const result = { ...schema };
-  for (const [key, entry] of Object.entries(schema)) {
-    if (exclusions.includes(key)) continue;
-    const [eventClass, subscribers] = entry as SchemaEntryTuple;
-    result[key] = [eventClass, [...subscribers, subscriber]];
-  }
-  return result as T;
-}
+import { installPlugins } from '@meetsmore/matador-v2';
 
-// Usage
 const baseSchema: MatadorSchema = {
-  [UserLoggedInEvent.key]: [UserLoggedInEvent, bind([detectLoginFraud])],
-  [UserLoggedOutEvent.key]: [UserLoggedOutEvent, bind([])],
-  [ChatMessageSent.key]: [ChatMessageSent, bind([notifyUser])],
+  [UserCreatedEvent.key]: [UserCreatedEvent, [sendWelcomeEmail]],
+  [OrderPlacedEvent.key]: [OrderPlacedEvent, [processOrder]],
+  [ChatMessageSentEvent.key]: [ChatMessageSentEvent, [notifyRecipient]],
 };
 
-const myMatadorSchema = withGlobalSubscriber(
-  baseSchema,
-  uploadEventToBigQuery,
-  [ChatMessageSent.key], // Exclude chat messages from BigQuery
-);
+const myMatadorSchema = installPlugins(baseSchema, [
+  {
+    subscriber: logToBigQuery,
+    exclusions: [ChatMessageSentEvent.key], // Don't log chat messages
+  }
+]);
 ```
+
+Each plugin defines a `subscriber` and optional `exclusions` array of event keys to skip.
 
 ### `DoRetry` & `DontRetry`
 
@@ -744,7 +773,11 @@ await matador.send(ScheduledNotificationEvent, notificationData, {
 Matador provides a CLI utility for quick local testing of your Matador configuration.
 
 ```bash
-bunx matador-cli <path-to-config-file> <path-to-event-file>
+# Send an event using config and event files
+bunx matador send <config-file> <event-file> [options]
+
+# Send a test event defined in the config file
+bunx matador send-test-event <config-file> [options]
 ```
 
 **Options:**
@@ -757,6 +790,7 @@ bunx matador-cli <path-to-config-file> <path-to-event-file>
 - `schema: MatadorSchema` - Map of event keys to [EventClass, Subscribers[]]
 - `topology?: Topology` - Optional topology (defaults to simple 'events' queue)
 - `hooks?: MatadorHooks` - Optional hooks
+- `testEvent?: { eventKey, data, before?, options? }` - Test event for `send-test-event` command
 
 **Event file** should export:
 - `eventKey: string` - The key of the event to dispatch
@@ -764,7 +798,8 @@ bunx matador-cli <path-to-config-file> <path-to-event-file>
 - `before?: unknown` - Optional 'before' data for change events
 - `options?: EventOptions` - Optional dispatch options (correlationId, metadata, delayMs)
 
-**Example:**
+**Examples:**
 ```bash
-bunx matador-cli ./my-config.ts ./test-event.ts --verbose
+bunx matador send ./my-config.ts ./test-event.ts --verbose
+bunx matador send-test-event ./my-config.ts
 ```
