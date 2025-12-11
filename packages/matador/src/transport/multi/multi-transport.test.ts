@@ -162,7 +162,7 @@ describe('MultiTransport', () => {
       expect(fallbackContexts).toHaveLength(1);
       const ctx = fallbackContexts[0]!;
       expect(ctx.failedTransport).toBe('local');
-      expect(ctx.successTransport).toBe('local');
+      expect(ctx.nextTransport).toBe('local');
       expect(ctx.queue).toBe('test-queue');
       expect(ctx.envelope).toBe(envelope);
       expect(ctx.error.message).toContain('is not connected');

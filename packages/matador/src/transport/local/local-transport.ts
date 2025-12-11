@@ -109,7 +109,7 @@ export class LocalTransport implements Transport {
     queue: string,
     envelope: Envelope,
     options?: SendOptions,
-  ): Promise<void> {
+  ): Promise<Transport['name']> {
     if (!this.connected) {
       throw new TransportNotConnectedError(this.name, 'send');
     }
@@ -117,10 +117,11 @@ export class LocalTransport implements Transport {
     // Handle delayed messages (non-blocking, like real transports)
     if (options?.delay !== undefined && options.delay > 0) {
       this.scheduleDelayedMessage(queue, envelope, options.delay);
-      return;
+      return this.name;
     }
 
     await this.enqueue(queue, envelope);
+    return this.name;
   }
 
   /**
@@ -177,6 +178,7 @@ export class LocalTransport implements Transport {
         attemptNumber: message.envelope.docket.attempts,
         deliveryCount: message.envelope.docket.attempts,
         sourceQueue: queue,
+        sourceTransport: this.name,
       };
 
       try {
@@ -308,6 +310,7 @@ export class LocalTransport implements Transport {
       attemptNumber: pending.envelope.docket.attempts,
       deliveryCount: pending.envelope.docket.attempts,
       sourceQueue: queue,
+      sourceTransport: this.name,
     };
 
     return { envelope: pending.envelope, receipt };

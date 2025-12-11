@@ -1,5 +1,5 @@
 import type { RetryDecision } from '../retry/index.js';
-import type { ConnectionState } from '../transport/index.js';
+import type { ConnectionState, Transport } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
 
 /**
@@ -28,6 +28,8 @@ export const consoleLogger: Logger = {
 export interface EnqueueSuccessContext {
   readonly envelope: Envelope;
   readonly queue: string;
+  /** The transport that was used (e.g., 'local', 'rabbitmq') */
+  readonly transport: string;
 }
 
 /**
@@ -49,9 +51,9 @@ export interface TransportFallbackContext {
   /** The queue the message was being sent to */
   readonly queue: string;
   /** The transport that failed */
-  readonly failedTransport: string;
-  /** The transport that succeeded */
-  readonly successTransport: string;
+  readonly failedTransport: Transport['name'];
+  /** The transport that will be tried next */
+  readonly nextTransport: Transport['name'];
   /** The error from the failed transport */
   readonly error: Error;
 }
@@ -62,6 +64,8 @@ export interface TransportFallbackContext {
 export interface EnqueueErrorContext {
   readonly envelope: Envelope;
   readonly error: Error;
+  /** The transport that failed (e.g., 'local', 'rabbitmq') */
+  readonly transport: string;
 }
 
 /**
@@ -71,6 +75,8 @@ export interface DecodeErrorContext {
   readonly error: Error;
   readonly rawMessage: Uint8Array;
   readonly sourceQueue: string;
+  /** The transport that received the message (e.g., 'local', 'rabbitmq') */
+  readonly transport: string;
 }
 
 /**
@@ -81,6 +87,8 @@ export interface WorkerSuccessContext {
   readonly subscriber: SubscriberDefinition;
   readonly result: unknown;
   readonly durationMs: number;
+  /** The transport that received the message (e.g., 'local', 'rabbitmq') */
+  readonly transport: string;
 }
 
 /**
@@ -92,6 +100,8 @@ export interface WorkerErrorContext {
   readonly error: Error;
   readonly durationMs: number;
   readonly decision: RetryDecision;
+  /** The transport that received the message (e.g., 'local', 'rabbitmq') */
+  readonly transport: string;
 }
 
 /**

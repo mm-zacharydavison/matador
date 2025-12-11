@@ -90,6 +90,7 @@ describe('ProcessingPipeline', () => {
         error: decodeError,
         rawMessage,
         sourceQueue: 'test-queue',
+        transport: 'mock',
       });
     });
 
@@ -438,6 +439,7 @@ describe('ProcessingPipeline', () => {
         subscriber: subscriberDef,
         result: undefined,
         durationMs: expect.any(Number),
+        transport: 'mock',
       });
     });
 
@@ -483,6 +485,7 @@ describe('ProcessingPipeline', () => {
         error,
         durationMs: expect.any(Number),
         decision,
+        transport: 'mock',
       });
     });
   });
@@ -519,7 +522,7 @@ describe('ProcessingPipeline', () => {
     it('should not complete message before handling retry decision', async () => {
       const envelope = createTestEnvelope();
       const completeMock = mock(async () => {});
-      const sendMock = mock(async () => {});
+      const sendMock = mock(async () => 'mock');
       let completeCalledAfterSend = false;
 
       sendMock.mockImplementation(async () => {
@@ -528,6 +531,7 @@ describe('ProcessingPipeline', () => {
         } else {
           completeCalledAfterSend = true;
         }
+        return 'mock';
       });
 
       const config = createMockConfig({
@@ -609,7 +613,7 @@ describe('ProcessingPipeline', () => {
 
     it('should handle retry decision by sending to queue with delay', async () => {
       const envelope = createTestEnvelope();
-      const sendMock = mock(async () => {});
+      const sendMock = mock(async () => 'mock');
       const completeMock = mock(async () => {});
 
       const config = createMockConfig({
@@ -658,7 +662,7 @@ describe('ProcessingPipeline', () => {
 
     it('should update envelope error fields on retry', async () => {
       const envelope = createTestEnvelope();
-      const sendMock = mock(async () => {});
+      const sendMock = mock(async () => 'mock');
 
       const config = createMockConfig({
         codec: {
@@ -741,7 +745,7 @@ describe('ProcessingPipeline', () => {
 
     it('should handle dead-letter manually when transport lacks support', async () => {
       const envelope = createTestEnvelope();
-      const sendMock = mock(async () => {});
+      const sendMock = mock(async () => 'mock');
       const completeMock = mock(async () => {});
 
       const config = createMockConfig({
@@ -954,7 +958,7 @@ describe('ProcessingPipeline', () => {
   describe('envelope error tracking', () => {
     it('should set firstError on first failure', async () => {
       const envelope = createTestEnvelope();
-      const sendMock = mock(async () => {});
+      const sendMock = mock(async () => 'mock');
 
       const config = createMockConfig({
         codec: {
@@ -995,7 +999,7 @@ describe('ProcessingPipeline', () => {
     it('should preserve firstError on subsequent failures', async () => {
       const envelope = createTestEnvelope();
       envelope.docket.firstError = 'Original error';
-      const sendMock = mock(async () => {});
+      const sendMock = mock(async () => 'mock');
 
       const config = createMockConfig({
         codec: {
@@ -1059,7 +1063,7 @@ function createMockConfig(
     disconnect: mock(async () => {}),
     isConnected: mock(() => true),
     applyTopology: mock(async () => {}),
-    send: mock(async () => {}),
+    send: mock(async () => 'mock'),
     subscribe: mock(async () => ({
       unsubscribe: async () => {},
       isActive: true,
@@ -1132,6 +1136,7 @@ function createReceipt(
     attemptNumber: 1,
     deliveryCount: 1,
     sourceQueue: 'test-queue',
+    sourceTransport: 'mock',
     ...overrides,
   };
 }

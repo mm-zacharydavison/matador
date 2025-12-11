@@ -226,6 +226,7 @@ function createContext(
     deliveryCount:
       receiptOverrides.deliveryCount ?? receiptOverrides.attemptNumber ?? 1,
     sourceQueue: 'test-queue',
+    sourceTransport: 'mock',
     ...receiptOverrides,
   };
 

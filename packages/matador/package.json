@@ -3,19 +3,26 @@
   "version": "2.0.0",
   "description": "Transport-agnostic event processing library",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "bin": {
     "matador-cli": "./cli.ts"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:integration": "bun test --grep integration",
@@ -32,7 +39,8 @@
   "devDependencies": {
     "@testcontainers/rabbitmq": "^10.16.0",
     "@types/amqplib": "^0.10.5",
-    "testcontainers": "^10.16.0"
+    "testcontainers": "^10.16.0",
+    "tsup": "^8.3.5"
   },
   "peerDependencies": {
     "zod": "^3.0.0"

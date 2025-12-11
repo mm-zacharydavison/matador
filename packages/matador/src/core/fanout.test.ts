@@ -65,7 +65,7 @@ describe('FanoutEngine', () => {
       isConnected: () => true,
       connect: mock(async () => {}),
       disconnect: mock(async () => {}),
-      send: mock(async () => {}),
+      send: mock(async () => 'mock'),
       subscribe: mock(async () => ({
         unsubscribe: async () => {},
         isActive: true,
@@ -601,6 +601,7 @@ describe('FanoutEngine', () => {
           if (queue === 'test.queue-1') {
             throw new Error('Queue 1 failed');
           }
+          return 'mock';
         }),
       };
 
@@ -683,6 +684,7 @@ describe('FanoutEngine', () => {
         ...transport,
         send: mock(async () => {
           countDuringSend = fanoutWithTracking.eventsBeingEnqueuedCount;
+          return 'mock';
         }),
       };
 
@@ -772,6 +774,7 @@ describe('FanoutEngine', () => {
           counts.push(current);
           maxCount = Math.max(maxCount, current);
           await new Promise((resolve) => setTimeout(resolve, 10));
+          return 'mock';
         }),
       };
 
@@ -892,6 +895,7 @@ describe('FanoutEngine', () => {
       expect(onEnqueueSuccess).toHaveBeenCalledWith({
         envelope: expect.any(Object),
         queue: 'test.events',
+        transport: 'mock',
       });
 
       const calls = onEnqueueSuccess.mock.calls as unknown as Array<[{ envelope: Envelope; queue: string }]>;
@@ -937,6 +941,7 @@ describe('FanoutEngine', () => {
       expect(onEnqueueError).toHaveBeenCalledWith({
         envelope: expect.any(Object),
         error: expect.any(TransportSendError),
+        transport: 'mock',
       });
 
       const calls = onEnqueueError.mock.calls as unknown as Array<[{ envelope: Envelope; error: TransportSendError }]>;

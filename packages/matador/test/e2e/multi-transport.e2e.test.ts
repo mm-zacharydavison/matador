@@ -137,7 +137,7 @@ describe.skipIf(SKIP_E2E)('MultiTransport E2E', () => {
       // Verify fallback was triggered
       expect(fallbackEvents).toHaveLength(1);
       expect(fallbackEvents[0]!.failedTransport).toBe('rabbitmq');
-      expect(fallbackEvents[0]!.successTransport).toBe('local');
+      expect(fallbackEvents[0]!.nextTransport).toBe('local');
       expect(fallbackEvents[0]!.queue).toBe(queueName);
     });
 

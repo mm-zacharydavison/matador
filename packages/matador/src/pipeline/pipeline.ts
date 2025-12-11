@@ -81,6 +81,7 @@ export class ProcessingPipeline {
         error: decodeError,
         rawMessage,
         sourceQueue: receipt.sourceQueue,
+        transport: receipt.sourceTransport,
       });
 
       return {
@@ -165,6 +166,7 @@ export class ProcessingPipeline {
         subscriber: subscriberDef,
         result,
         durationMs,
+        transport: receipt.sourceTransport,
       });
 
       return {
@@ -195,6 +197,7 @@ export class ProcessingPipeline {
       error,
       durationMs,
       decision,
+      transport: receipt.sourceTransport,
     });
 
     return {

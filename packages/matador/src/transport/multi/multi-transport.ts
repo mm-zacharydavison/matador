@@ -106,7 +106,7 @@ function mergeCapabilities(
  * ```typescript
  * const transport = new MultiTransport(
  *   { transports: [rabbitMQTransport, localTransport] },
- *   { onEnqueueFallback: (ctx) => console.warn(`Fallback to ${ctx.successTransport}`) },
+ *   { onEnqueueFallback: (ctx) => console.warn(`Fallback to ${ctx.nextTransport}`) },
  * );
  * ```
  */
@@ -164,42 +164,39 @@ export class MultiTransport implements Transport {
     queue: string,
     envelope: Envelope,
     options?: SendOptions,
-  ): Promise<void> {
+  ): Promise<Transport['name']> {
     // Determine which transport to use
     const selectedTransport = await this.selectTransport();
 
     // If fallback is disabled, only use selected transport
     if (!this.fallbackEnabled) {
-      await selectedTransport.send(queue, envelope, options);
-      return;
+      return selectedTransport.send(queue, envelope, options);
     }
 
     // Build transport order: selected first, then others
     const transportOrder = this.getTransportOrder(selectedTransport);
 
     const errors: Error[] = [];
-    let lastFailedTransportName: string | undefined;
 
-    for (const transport of transportOrder) {
+    for (let i = 0; i < transportOrder.length; i++) {
+      const transport = transportOrder[i]!;
       try {
-        await transport.send(queue, envelope, options);
-
-        // If we had a previous failure, notify about fallback
-        if (errors.length > 0 && lastFailedTransportName && this.hooks.onEnqueueFallback) {
-          this.hooks.onEnqueueFallback({
-            envelope,
-            queue,
-            failedTransport: lastFailedTransportName,
-            successTransport: transport.name,
-            error: errors[errors.length - 1]!,
-          });
-        }
-
-        return;
+        return await transport.send(queue, envelope, options);
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         errors.push(err);
-        lastFailedTransportName = transport.name;
+
+        // Notify about fallback before trying next transport
+        const nextTransport = transportOrder[i + 1];
+        if (nextTransport && this.hooks.onEnqueueFallback) {
+          this.hooks.onEnqueueFallback({
+            envelope,
+            queue,
+            failedTransport: transport.name,
+            nextTransport: nextTransport.name,
+            error: err,
+          });
+        }
         // Continue to next transport
       }
     }

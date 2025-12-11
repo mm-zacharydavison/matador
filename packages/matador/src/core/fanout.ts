@@ -125,7 +125,7 @@ export class FanoutEngine {
       // Send to transport
       this.enqueuingCount++;
       try {
-        await this.transport.send(
+        const usedTransport = await this.transport.send(
           qualifiedQueue,
           envelope,
           options.delayMs !== undefined
@@ -137,6 +137,7 @@ export class FanoutEngine {
         await this.hooks.onEnqueueSuccess({
           envelope,
           queue: qualifiedQueue,
+          transport: usedTransport,
         });
       } catch (error) {
         const cause = error instanceof Error ? error : new Error(String(error));
@@ -150,6 +151,7 @@ export class FanoutEngine {
         await this.hooks.onEnqueueError({
           envelope,
           error: err,
+          transport: this.transport.name,
         });
       } finally {
         this.enqueuingCount--;

@@ -173,7 +173,7 @@ export class RabbitMQTransport implements Transport {
     queue: string,
     envelope: Envelope,
     options?: SendOptions,
-  ): Promise<void> {
+  ): Promise<Transport['name']> {
     if (!this.publishChannel || !this.topology) {
       throw new TransportNotConnectedError(this.name, 'send');
     }
@@ -212,7 +212,7 @@ export class RabbitMQTransport implements Transport {
         buffer,
         publishOptions,
       );
-      return;
+      return this.name;
     }
 
     // Transport-specific options
@@ -228,6 +228,7 @@ export class RabbitMQTransport implements Transport {
     const exchange = this.getMainExchangeName(this.topology.namespace);
 
     this.publishChannel.publish(exchange, routingKey, buffer, publishOptions);
+    return this.name;
   }
 
   async subscribe(
@@ -261,6 +262,7 @@ export class RabbitMQTransport implements Transport {
           attemptNumber,
           deliveryCount: this.getDeliveryCount(msg, attemptNumber),
           sourceQueue: queue,
+          sourceTransport: this.name,
         };
 
         try {

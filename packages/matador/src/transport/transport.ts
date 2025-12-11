@@ -99,6 +99,12 @@ export interface MessageReceipt {
 
   /** Original queue/topic the message came from */
   readonly sourceQueue: string;
+
+  /**
+   * The name of the transport that received this message (e.g., 'local', 'rabbitmq').
+   * For MultiTransport, this is the actual underlying transport, not the wrapper name.
+   */
+  readonly sourceTransport: string;
 }
 
 /**
@@ -156,8 +162,13 @@ export interface Transport {
 
   /**
    * Sends a message to the specified queue.
+   * @returns The name of the transport that was used (useful for MultiTransport)
    */
-  send(queue: string, envelope: Envelope, options?: SendOptions): Promise<void>;
+  send(
+    queue: string,
+    envelope: Envelope,
+    options?: SendOptions,
+  ): Promise<Transport['name']>;
 
   /**
    * Subscribes to messages on the specified queue.

@@ -246,7 +246,7 @@ describe.each(transportFactories)(
 
           await expect(
             transport.send(queueName, envelope),
-          ).resolves.toBeUndefined();
+          ).resolves.toBe(transport.name);
         });
 
         it('should receive sent messages via subscription', async () => {
