@@ -332,7 +332,11 @@ describe('ProcessingPipeline', () => {
       let executeCalled = false;
 
       const onWorkerWrapMock = mock(
-        async (_envelope: Envelope, _subscriber: SubscriberDefinition, execute: () => Promise<void>) => {
+        async (
+          _envelope: Envelope,
+          _subscriber: SubscriberDefinition,
+          execute: () => Promise<void>,
+        ) => {
           await execute();
           executeCalled = true;
         },
@@ -548,10 +552,12 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'retry' as const,
-            delay: 1000,
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'retry' as const,
+              delay: 1000,
+            }),
+          ),
         },
         transport: {
           complete: completeMock,
@@ -575,10 +581,12 @@ describe('ProcessingPipeline', () => {
       const envelope = createTestEnvelope();
       const subscriberDef = createSubscriberDefinition();
       const error = new Error('Test error');
-      const shouldRetryMock = mock((): RetryDecision => ({
-        action: 'retry' as const,
-        delay: 1000,
-      }));
+      const shouldRetryMock = mock(
+        (): RetryDecision => ({
+          action: 'retry' as const,
+          delay: 1000,
+        }),
+      );
 
       const config = createMockConfig({
         codec: {
@@ -630,10 +638,12 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'retry' as const,
-            delay: 2000,
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'retry' as const,
+              delay: 2000,
+            }),
+          ),
         },
         transport: {
           send: sendMock,
@@ -678,10 +688,12 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'retry' as const,
-            delay: 1000,
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'retry' as const,
+              delay: 1000,
+            }),
+          ),
         },
         transport: {
           send: sendMock,
@@ -718,11 +730,13 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'dead-letter' as const,
-            queue: 'undeliverable',
-            reason: 'Max attempts exceeded',
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'dead-letter' as const,
+              queue: 'undeliverable',
+              reason: 'Max attempts exceeded',
+            }),
+          ),
         },
         transport: {
           sendToDeadLetter: sendToDeadLetterMock,
@@ -762,11 +776,13 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'dead-letter' as const,
-            queue: 'undeliverable',
-            reason: 'Max attempts exceeded',
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'dead-letter' as const,
+              queue: 'undeliverable',
+              reason: 'Max attempts exceeded',
+            }),
+          ),
         },
         transport: {
           send: sendMock,
@@ -774,14 +790,18 @@ describe('ProcessingPipeline', () => {
         },
       });
       // Remove sendToDeadLetter after merging
-      (config.transport as { sendToDeadLetter?: unknown }).sendToDeadLetter = undefined;
+      (config.transport as { sendToDeadLetter?: unknown }).sendToDeadLetter =
+        undefined;
 
       const pipeline = new ProcessingPipeline(config);
       const receipt = createReceipt({ sourceQueue: 'test-queue' });
 
       await pipeline.process(new Uint8Array(), receipt);
 
-      expect(sendMock).toHaveBeenCalledWith('test-queue.undeliverable', envelope);
+      expect(sendMock).toHaveBeenCalledWith(
+        'test-queue.undeliverable',
+        envelope,
+      );
       expect(completeMock).toHaveBeenCalledWith(receipt);
     });
 
@@ -803,11 +823,13 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'dead-letter' as const,
-            queue: 'undeliverable',
-            reason: 'Max attempts exceeded',
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'dead-letter' as const,
+              queue: 'undeliverable',
+              reason: 'Max attempts exceeded',
+            }),
+          ),
         },
         transport: {
           sendToDeadLetter: sendToDeadLetterMock,
@@ -820,7 +842,9 @@ describe('ProcessingPipeline', () => {
 
       await pipeline.process(new Uint8Array(), receipt);
 
-      const calls = sendToDeadLetterMock.mock.calls as unknown as Array<[MessageReceipt, string, Envelope, string]>;
+      const calls = sendToDeadLetterMock.mock.calls as unknown as Array<
+        [MessageReceipt, string, Envelope, string]
+      >;
       const sentEnvelope = calls[0]![2];
       expect(sentEnvelope.docket.originalQueue).toBe('original-queue');
     });
@@ -843,10 +867,12 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'discard' as const,
-            reason: 'Discarding message',
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'discard' as const,
+              reason: 'Discarding message',
+            }),
+          ),
         },
         transport: {
           complete: completeMock,
@@ -974,10 +1000,12 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'retry' as const,
-            delay: 1000,
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'retry' as const,
+              delay: 1000,
+            }),
+          ),
         },
         transport: {
           send: sendMock,
@@ -1015,10 +1043,12 @@ describe('ProcessingPipeline', () => {
           })),
         },
         retryPolicy: {
-          shouldRetry: mock((): RetryDecision => ({
-            action: 'retry' as const,
-            delay: 1000,
-          })),
+          shouldRetry: mock(
+            (): RetryDecision => ({
+              action: 'retry' as const,
+              delay: 1000,
+            }),
+          ),
         },
         transport: {
           send: sendMock,
@@ -1086,10 +1116,12 @@ function createMockConfig(
   };
 
   const defaultRetryPolicy: RetryPolicy = {
-    shouldRetry: mock((): RetryDecision => ({
-      action: 'discard' as const,
-      reason: 'default',
-    })),
+    shouldRetry: mock(
+      (): RetryDecision => ({
+        action: 'discard' as const,
+        reason: 'default',
+      }),
+    ),
     getDelay: mock(() => 1000),
     ...overrides.retryPolicy,
   };

@@ -104,6 +104,34 @@ describe('StandardRetryPolicy', () => {
       expect(decision.action).toBe('retry');
     });
 
+    it('should dead-letter unknown idempotency subscriber on redelivery (unknown == no)', () => {
+      const policy = new StandardRetryPolicy();
+      const context = createContext(
+        new Error('Some error'),
+        { attemptNumber: 1, redelivered: true },
+        { idempotent: 'unknown' },
+      );
+
+      const decision = policy.shouldRetry(context);
+
+      expect(decision.action).toBe('dead-letter');
+      assertDeadLetter(decision);
+      expect(decision.reason).toContain('Non-idempotent subscriber');
+    });
+
+    it('should retry resumable subscriber on redelivery', () => {
+      const policy = new StandardRetryPolicy();
+      const context = createContext(
+        new Error('Some error'),
+        { attemptNumber: 1, redelivered: true },
+        { idempotent: 'resumable' },
+      );
+
+      const decision = policy.shouldRetry(context);
+
+      expect(decision.action).toBe('retry');
+    });
+
     it('should retry generic errors with backoff', () => {
       const policy = new StandardRetryPolicy({ maxAttempts: 5 });
       const context = createContext(new Error('Generic error'), {
@@ -232,7 +260,7 @@ function createContext(
 
   const subscriber: SubscriberDefinition = {
     name: 'test-subscriber',
-    idempotent: 'unknown',
+    idempotent: 'yes',
     importance: 'should-investigate',
     ...subscriberOverrides,
   };

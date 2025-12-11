@@ -1,3 +1,5 @@
+import type { Checkpoint, CheckpointStore } from '../checkpoint/index.js';
+import { NoOpCheckpointStore, ResumableContext } from '../checkpoint/index.js';
 import type { Codec } from '../codec/index.js';
 import { CodecDecodeError } from '../codec/index.js';
 import {
@@ -9,6 +11,7 @@ import type { RetryDecision, RetryPolicy } from '../retry/index.js';
 import type { SchemaRegistry } from '../schema/index.js';
 import type { MessageReceipt, Transport } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
+import { isResumableSubscriber } from '../types/index.js';
 
 /**
  * Configuration for the processing pipeline.
@@ -19,6 +22,8 @@ export interface PipelineConfig {
   readonly codec: Codec;
   readonly retryPolicy: RetryPolicy;
   readonly hooks: SafeHooks;
+  /** Optional checkpoint store for resumable subscribers */
+  readonly checkpointStore?: CheckpointStore | undefined;
 }
 
 /**
@@ -48,6 +53,7 @@ export class ProcessingPipeline {
   private readonly codec: Codec;
   private readonly retryPolicy: RetryPolicy;
   private readonly hooks: SafeHooks;
+  private readonly checkpointStore: CheckpointStore;
 
   constructor(config: PipelineConfig) {
     this.transport = config.transport;
@@ -55,6 +61,7 @@ export class ProcessingPipeline {
     this.codec = config.codec;
     this.retryPolicy = config.retryPolicy;
     this.hooks = config.hooks;
+    this.checkpointStore = config.checkpointStore ?? new NoOpCheckpointStore();
   }
 
   /**
@@ -145,12 +152,55 @@ export class ProcessingPipeline {
     // 3. Execute subscriber callback with hooks
     let result: unknown;
     let error: Error | undefined;
+    let context: ResumableContext | undefined;
+
+    // For resumable subscribers, load existing checkpoint and create context
+    const isResumable = isResumableSubscriber(subscriber);
+    let existingCheckpoint: Checkpoint | undefined;
+
+    if (isResumable) {
+      existingCheckpoint = await this.checkpointStore.get(envelope.id);
+
+      if (existingCheckpoint) {
+        await this.hooks.onCheckpointLoaded?.({
+          envelope,
+          subscriber: subscriberDef,
+          checkpoint: existingCheckpoint,
+          cachedSteps: Object.keys(existingCheckpoint.completedSteps).length,
+        });
+      }
+
+      context = new ResumableContext({
+        store: this.checkpointStore,
+        envelope,
+        subscriber: subscriberDef,
+        existingCheckpoint,
+        hooks: {
+          onCheckpointHit: (ctx) => this.hooks.onCheckpointHit?.(ctx),
+          onCheckpointMiss: (ctx) => this.hooks.onCheckpointMiss?.(ctx),
+        },
+      });
+    }
 
     await this.hooks.onWorkerWrap(envelope, subscriberDef, async () => {
       await this.hooks.onWorkerBeforeProcess(envelope, subscriberDef);
 
       try {
-        result = await subscriber.callback(envelope);
+        if (isResumable && context) {
+          // Resumable subscriber: pass context as second argument
+          // Cast needed because TypeScript can't narrow the union type based on isResumable
+          const resumableCallback = subscriber.callback as (
+            envelope: Envelope,
+            context: ResumableContext,
+          ) => Promise<void> | void;
+          result = await resumableCallback(envelope, context);
+        } else {
+          // Standard subscriber: just pass envelope
+          const standardCallback = subscriber.callback as (
+            envelope: Envelope,
+          ) => Promise<void> | void;
+          result = await standardCallback(envelope);
+        }
       } catch (e) {
         error = e instanceof Error ? e : new Error(String(e));
       }
@@ -160,6 +210,16 @@ export class ProcessingPipeline {
 
     // 4. Handle success
     if (!error) {
+      // Clear checkpoint on success for resumable subscribers
+      if (context) {
+        await context.clear();
+        await this.hooks.onCheckpointCleared?.({
+          envelope,
+          subscriber: subscriberDef,
+          reason: 'success',
+        });
+      }
+
       await this.transport.complete(receipt);
       await this.hooks.onWorkerSuccess({
         envelope,
@@ -188,6 +248,16 @@ export class ProcessingPipeline {
     // Update envelope with error info
     envelope.docket.lastError = error.message;
     envelope.docket.firstError ??= error.message;
+
+    // Clear checkpoint on dead-letter (terminal state)
+    if (decision.action === 'dead-letter' && context) {
+      await context.clear();
+      await this.hooks.onCheckpointCleared?.({
+        envelope,
+        subscriber: subscriberDef,
+        reason: 'dead-letter',
+      });
+    }
 
     await this.handleRetryDecision(receipt, envelope, decision);
 

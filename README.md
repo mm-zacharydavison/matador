@@ -84,6 +84,7 @@ This version of Matador is Matador V2, and was re-written from the ground up usi
 - Retry control flow errors (`DoRetry` and `DontRetry`), so subscribers can manually dictate retry logic.
 - Clear, documented, actionable errors for all error cases.
 - Poisoned message detection.
+- Resumable subscribers.
 
 # Getting Started
 
@@ -370,6 +371,15 @@ When using `RabbitMQ`, `RabbitMQCodec` is used, which still uses `JSONCodec` int
 | `backoffMultiplier`| 2        | Multiplier for exponential backoff                       |
 | `maxDeliveries`    | 5        | Max native delivery count before poison detection        |
 
+**Checkpoint Store** options (for resumable subscribers):
+
+| Store                  | Description                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| `MemoryCheckpointStore`| In-memory store for testing/development. Checkpoints are lost on process restart.      |
+| `NoOpCheckpointStore`  | No-op store (default). `io()` works but doesn't persist across retries.                |
+
+For production, implement `CheckpointStore` interface with Redis or another persistent store.
+
 ### `Hooks`
 
 Hooks are passed as the second argument to the `Matador` constructor and provide lifecycle callbacks for observability and dynamic configuration.
@@ -414,6 +424,97 @@ Hooks are passed as the second argument to the `Matador` constructor and provide
 > In programming, an idempotent operation is one that can be performed multiple times with the same result as if it were done only once.
 
 In **Matador**, `idempotent` has a very close meaning, but ultimately just means that an event is _allowed_ to be retried automatically by **Matador**.
+
+| Value       | Meaning                                                            | Retry Behavior                     |
+| ----------- | ------------------------------------------------------------------ | ---------------------------------- |
+| `'yes'`     | Subscriber is manually idempotent (safe to retry)                  | Retries allowed                    |
+| `'no'`      | Subscriber is NOT idempotent (unsafe to retry)                     | Dead-letter on redelivery          |
+| `'unknown'` | Idempotency not determined (default)                               | Dead-letter on redelivery          |
+| `'resumable'` | Subscriber uses `io()` for checkpoint-based idempotency          | Retries allowed, checkpoint loaded |
+
+### `ResumableSubscriber`
+
+Matador supports durable / resumable subscribers.
+
+This allows subscribers that fail to resume where they left off, allowing you to retry subscribers that otherwise would not be idempotent.
+
+This requires a persistent `CheckpointStore` to be configured (e.g., Redis, database, etc.).
+
+When using `idempotent: 'resumable'`, you can use the `io` function argument to wrap side-effects, which will be cached when successful.
+
+On subsequent retries, those successful `io` calls will return the cached value, instead of executing again.
+
+```ts
+import { MemoryCheckpointStore } from '@meetsmore/matador';
+
+// Configure Matador with a checkpoint store
+const matador = new Matador({
+  transport,
+  topology,
+  schema,
+  consumeFrom: ['events'],
+  checkpointStore: new MemoryCheckpointStore(), // Use RedisCheckpointStore in production
+});
+
+// Define a resumable subscriber
+const processOrder: Subscriber<OrderPlacedEvent> = {
+  name: 'process-order',
+  idempotent: 'resumable',  // Enables the io() function
+  callback: async (envelope, { io }) => {
+    const { orderId, userId, amount } = envelope.data;
+
+    // Step 1: Reserve inventory (cached on retry)
+    const reservation = await io('reserve-inventory', async () => {
+      return await inventoryService.reserve(orderId);
+    });
+
+    // Step 2: Charge payment (cached on retry)
+    const payment = await io('charge-payment', async () => {
+      return await paymentService.charge(userId, amount);
+    });
+
+    // Step 3: Send confirmation email (cached on retry)
+    await io('send-confirmation', async () => {
+      await emailService.send(userId, {
+        subject: 'Order Confirmed',
+        reservationId: reservation.id,
+        transactionId: payment.transactionId,
+      });
+    });
+  },
+};
+```
+
+If the subscriber crashes after charging the payment but before sending the email:
+- On retry, `reserve-inventory` returns the cached reservation (no duplicate reservation)
+- On retry, `charge-payment` returns the cached payment (no double charge)
+- `send-confirmation` executes fresh (no cache entry exists)
+
+You can also use `all()` to execute multiple `io()` operations in parallel:
+
+```ts
+const enrichUserData: Subscriber<UserCreatedEvent> = {
+  name: 'enrich-user-data',
+  idempotent: 'resumable',
+  callback: async (envelope, { io, all }) => {
+    const { userId } = envelope.data;
+
+    // Fetch multiple data sources in parallel (each with a unique key)
+    const [profile, preferences, history] = await all([
+      ['fetch-profile', async () => await profileService.get(userId)],
+      ['fetch-preferences', async () => await prefsService.get(userId)],
+      ['fetch-history', async () => await historyService.get(userId)],
+    ]);
+
+    // Use the enriched data
+    await io('save-enrichment', async () => {
+      await enrichmentService.save({ userId, profile, preferences, history });
+    });
+  },
+};
+```
+
+Each `io()` key must be unique within the subscriber and stable across retries. Use descriptive names like `'fetch-user'`, `'send-email'`, or `'charge-payment'`.
 
 # Why it works this way
 
@@ -548,6 +649,13 @@ All errors in **Matador** extend `MatadorError` and include a `description` fiel
 | `MessageMaybePoisonedError`       | Message redelivered too many times (possible poison message).                              |
 | `IdempotentMessageCannotRetryError` | Non-idempotent subscriber received a redelivered message.                                |
 | `TimeoutError`                    | Operation timed out before completing.                                                     |
+
+**Checkpoint Errors** (resumable subscribers):
+
+| Error                   | Description                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `DuplicateIoKeyError`   | Same `io()` key used multiple times in a single subscriber execution. Keys must be unique.       |
+| `CheckpointStoreError`  | Checkpoint store operation failed (get/set/delete). Check underlying storage connectivity.       |
 
 **Retry Control Errors** (thrown by subscribers to control retry behavior):
 

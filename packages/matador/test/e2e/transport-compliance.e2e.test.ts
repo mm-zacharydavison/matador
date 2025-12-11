@@ -244,9 +244,9 @@ describe.each(transportFactories)(
         it('should send a message without error', async () => {
           const envelope = createTestEnvelope();
 
-          await expect(
-            transport.send(queueName, envelope),
-          ).resolves.toBe(transport.name);
+          await expect(transport.send(queueName, envelope)).resolves.toBe(
+            transport.name,
+          );
         });
 
         it('should receive sent messages via subscription', async () => {

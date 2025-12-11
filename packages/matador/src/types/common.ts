@@ -15,11 +15,12 @@ export type Importance =
 
 /**
  * Idempotency declaration for subscribers.
- * - 'yes': Safe to retry on failure
+ * - 'yes': Safe to retry on failure (subscriber handles duplicates)
  * - 'no': Not safe to retry, may cause duplicate side effects
- * - 'unknown': Idempotency not determined
+ * - 'unknown': Idempotency not determined (default)
+ * - 'resumable': Uses checkpoint-based idempotency via io() calls
  */
-export type Idempotency = 'yes' | 'no' | 'unknown';
+export type Idempotency = 'yes' | 'no' | 'unknown' | 'resumable';
 
 /**
  * Result of a validation operation.

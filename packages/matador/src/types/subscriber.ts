@@ -1,3 +1,4 @@
+import type { SubscriberContext } from '../checkpoint/index.js';
 import type { Idempotency, Importance } from './common.js';
 import type { Envelope } from './envelope.js';
 import type { MatadorEvent } from './event.js';
@@ -14,22 +15,34 @@ import type { MatadorEvent } from './event.js';
 export type EnvelopeOf<T extends MatadorEvent> = Envelope<T['data']>;
 
 /**
- * Callback function executed when an event is received.
+ * Callback function executed when an event is received (standard subscribers).
  * Receives the full envelope containing id, data, and docket.
  */
-export type SubscriberCallback<T = unknown> = (
+export type StandardCallback<T = unknown> = (
   envelope: Envelope<T>,
 ) => Promise<void> | void;
 
 /**
- * Configuration options for a subscriber.
+ * Callback function for resumable subscribers.
+ * Receives the envelope and a SubscriberContext with io() for checkpointed operations.
  */
-export interface SubscriberOptions {
+export type ResumableCallback<T = unknown> = (
+  envelope: Envelope<T>,
+  context: SubscriberContext,
+) => Promise<void> | void;
+
+/**
+ * Callback function executed when an event is received.
+ * @deprecated Use StandardCallback or ResumableCallback instead.
+ */
+export type SubscriberCallback<T = unknown> = StandardCallback<T>;
+
+/**
+ * Base configuration options shared by all subscriber types.
+ */
+export interface BaseSubscriberOptions {
   /** Route this subscriber's events to a specific queue */
   readonly targetQueue?: string | undefined;
-
-  /** Idempotency declaration for retry handling */
-  readonly idempotent?: Idempotency | undefined;
 
   /** Importance level for monitoring and alerting */
   readonly importance?: Importance | undefined;
@@ -39,22 +52,66 @@ export interface SubscriberOptions {
 }
 
 /**
- * Full subscriber definition with callback.
+ * Options for standard (non-resumable) subscribers.
  */
-export interface Subscriber<T extends MatadorEvent> extends SubscriberOptions {
+export interface StandardSubscriberOptions extends BaseSubscriberOptions {
+  /** Idempotency declaration for retry handling (non-resumable) */
+  readonly idempotent?: 'yes' | 'no' | 'unknown' | undefined;
+}
+
+/**
+ * Options for resumable subscribers that use io() for checkpointed operations.
+ */
+export interface ResumableSubscriberOptions extends BaseSubscriberOptions {
+  /** Must be 'resumable' to enable checkpoint-based idempotency */
+  readonly idempotent: 'resumable';
+}
+
+/**
+ * Configuration options for a subscriber.
+ * Discriminated union based on idempotent value.
+ */
+export type SubscriberOptions =
+  | StandardSubscriberOptions
+  | ResumableSubscriberOptions;
+
+/**
+ * Standard subscriber definition with standard callback.
+ */
+export interface StandardSubscriber<T extends MatadorEvent>
+  extends StandardSubscriberOptions {
   /** Human-readable name for the subscriber */
   readonly name: string;
 
   /** Callback function to execute when event is received */
-  readonly callback: SubscriberCallback<T['data']>;
+  readonly callback: StandardCallback<T['data']>;
 }
+
+/**
+ * Resumable subscriber definition with resumable callback.
+ */
+export interface ResumableSubscriber<T extends MatadorEvent>
+  extends ResumableSubscriberOptions {
+  /** Human-readable name for the subscriber */
+  readonly name: string;
+
+  /** Callback function with SubscriberContext for checkpointed operations */
+  readonly callback: ResumableCallback<T['data']>;
+}
+
+/**
+ * Full subscriber definition with callback (either standard or resumable).
+ */
+export type Subscriber<T extends MatadorEvent> =
+  | StandardSubscriber<T>
+  | ResumableSubscriber<T>;
 
 /**
  * Subscriber stub for multi-codebase scenarios where subscriber implementation
  * is in a remote service. Declares the subscriber contract without providing
  * the callback.
  */
-export interface SubscriberStub extends SubscriberOptions {
+export interface SubscriberStub extends StandardSubscriberOptions {
   /** Human-readable name for the subscriber */
   readonly name: string;
 
@@ -91,23 +148,138 @@ export function isSubscriber(
 }
 
 /**
+ * Type guard to check if a subscriber is resumable.
+ */
+export function isResumableSubscriber(
+  subscriber: AnySubscriber,
+  // biome-ignore lint/suspicious/noExplicitAny: Required for variance compatibility
+): subscriber is ResumableSubscriber<MatadorEvent<any>> {
+  return isSubscriber(subscriber) && subscriber.idempotent === 'resumable';
+}
+
+/**
+ * Type guard to check if a subscriber is a standard (non-resumable) subscriber.
+ */
+export function isStandardSubscriber(
+  subscriber: AnySubscriber,
+  // biome-ignore lint/suspicious/noExplicitAny: Required for variance compatibility
+): subscriber is StandardSubscriber<MatadorEvent<any>> {
+  return isSubscriber(subscriber) && subscriber.idempotent !== 'resumable';
+}
+
+/**
+ * Input options for createSubscriber with standard callback.
+ */
+export interface CreateStandardSubscriberInput<T extends MatadorEvent> {
+  readonly name: string;
+  readonly callback: StandardCallback<T['data']>;
+  readonly idempotent?: 'yes' | 'no' | 'unknown' | undefined;
+  readonly importance?: Importance | undefined;
+  readonly targetQueue?: string | undefined;
+  readonly enabled?: (() => boolean | Promise<boolean>) | undefined;
+}
+
+/**
+ * Input options for createSubscriber with resumable callback.
+ */
+export interface CreateResumableSubscriberInput<T extends MatadorEvent> {
+  readonly name: string;
+  readonly callback: ResumableCallback<T['data']>;
+  readonly idempotent: 'resumable';
+  readonly importance?: Importance | undefined;
+  readonly targetQueue?: string | undefined;
+  readonly enabled?: (() => boolean | Promise<boolean>) | undefined;
+}
+
+/**
+ * Input options for createSubscriber (discriminated union).
+ */
+export type CreateSubscriberInput<T extends MatadorEvent> =
+  | CreateStandardSubscriberInput<T>
+  | CreateResumableSubscriberInput<T>;
+
+/**
  * Creates a subscriber definition.
+ *
+ * @example Standard subscriber
+ * ```typescript
+ * const subscriber = createSubscriber<MyEvent>({
+ *   name: 'my-subscriber',
+ *   callback: async (envelope) => {
+ *     console.log(envelope.data);
+ *   },
+ * });
+ * ```
+ *
+ * @example Resumable subscriber with io()
+ * ```typescript
+ * const subscriber = createSubscriber<MyEvent>({
+ *   name: 'my-resumable-subscriber',
+ *   idempotent: 'resumable',
+ *   callback: async (envelope, { io }) => {
+ *     await io('step-1', () => doSomething());
+ *   },
+ * });
+ * ```
+ */
+export function createSubscriber<T extends MatadorEvent>(
+  input: CreateSubscriberInput<T>,
+): Subscriber<T>;
+
+/**
+ * @deprecated Use object-based API instead: createSubscriber({ name, callback, ...options })
  */
 export function createSubscriber<T extends MatadorEvent>(
   name: string,
-  callback: SubscriberCallback<T['data']>,
-  options: SubscriberOptions = {},
+  callback: StandardCallback<T['data']>,
+  options?: StandardSubscriberOptions,
+): StandardSubscriber<T>;
+
+export function createSubscriber<T extends MatadorEvent>(
+  inputOrName: CreateSubscriberInput<T> | string,
+  callback?: StandardCallback<T['data']>,
+  options?: StandardSubscriberOptions,
 ): Subscriber<T> {
-  return {
-    name,
-    callback,
-    idempotent: options.idempotent ?? 'unknown',
-    importance: options.importance ?? 'should-investigate',
-    ...(options.targetQueue !== undefined && {
-      targetQueue: options.targetQueue,
+  // Legacy API: createSubscriber(name, callback, options)
+  if (typeof inputOrName === 'string') {
+    const opts = options ?? {};
+    return {
+      name: inputOrName,
+      callback: callback!,
+      idempotent: opts.idempotent ?? 'unknown',
+      importance: opts.importance ?? 'should-investigate',
+      ...(opts.targetQueue !== undefined && {
+        targetQueue: opts.targetQueue,
+      }),
+      ...(opts.enabled !== undefined && { enabled: opts.enabled }),
+    } as StandardSubscriber<T>;
+  }
+
+  // New API: createSubscriber({ name, callback, ... })
+  const input = inputOrName;
+  const base = {
+    name: input.name,
+    callback: input.callback,
+    importance: input.importance ?? 'should-investigate',
+    ...(input.targetQueue !== undefined && {
+      targetQueue: input.targetQueue,
     }),
-    ...(options.enabled !== undefined && { enabled: options.enabled }),
+    ...(input.enabled !== undefined && { enabled: input.enabled }),
   };
+
+  if (input.idempotent === 'resumable') {
+    return {
+      ...base,
+      idempotent: 'resumable',
+      callback: input.callback,
+    } as ResumableSubscriber<T>;
+  }
+
+  return {
+    ...base,
+    idempotent: input.idempotent ?? 'unknown',
+    callback: input.callback,
+  } as StandardSubscriber<T>;
 }
 
 /**
@@ -115,7 +287,7 @@ export function createSubscriber<T extends MatadorEvent>(
  */
 export function createSubscriberStub(
   name: string,
-  options: SubscriberOptions = {},
+  options: StandardSubscriberOptions = {},
 ): SubscriberStub {
   return {
     name,

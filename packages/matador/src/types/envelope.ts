@@ -75,7 +75,11 @@ export interface Docket {
  */
 type DocketCreateFields = Pick<
   Docket,
-  'eventKey' | 'eventDescription' | 'targetSubscriber' | 'importance' | 'correlationId'
+  | 'eventKey'
+  | 'eventDescription'
+  | 'targetSubscriber'
+  | 'importance'
+  | 'correlationId'
 >;
 
 /**

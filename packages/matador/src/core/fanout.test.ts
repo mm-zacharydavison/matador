@@ -32,7 +32,8 @@ class OrderPlacedEvent extends MatadorEvent {
 
 class UserCreatedEventWithMetadata extends MatadorEvent {
   static readonly key = 'user.created.with-metadata';
-  static readonly description = 'Fired when a new user is created (with metadata)';
+  static readonly description =
+    'Fired when a new user is created (with metadata)';
 
   constructor(
     public data: { userId: string; email: string },
@@ -898,7 +899,9 @@ describe('FanoutEngine', () => {
         transport: 'mock',
       });
 
-      const calls = onEnqueueSuccess.mock.calls as unknown as Array<[{ envelope: Envelope; queue: string }]>;
+      const calls = onEnqueueSuccess.mock.calls as unknown as Array<
+        [{ envelope: Envelope; queue: string }]
+      >;
       const callArgs = calls[0]![0];
       expect(callArgs.envelope.docket.eventKey).toBe('user.created');
       expect(callArgs.envelope.docket.targetSubscriber).toBe('handle-user');
@@ -944,7 +947,9 @@ describe('FanoutEngine', () => {
         transport: 'mock',
       });
 
-      const calls = onEnqueueError.mock.calls as unknown as Array<[{ envelope: Envelope; error: TransportSendError }]>;
+      const calls = onEnqueueError.mock.calls as unknown as Array<
+        [{ envelope: Envelope; error: TransportSendError }]
+      >;
       const callArgs = calls[0]![0];
       expect(callArgs.envelope.docket.eventKey).toBe('user.created');
       expect(callArgs.error).toBeInstanceOf(TransportSendError);

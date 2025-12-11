@@ -1,3 +1,4 @@
+import type { CheckpointStore } from '../checkpoint/index.js';
 import type { Codec } from '../codec/index.js';
 import { JsonCodec } from '../codec/index.js';
 import {
@@ -50,6 +51,14 @@ export interface MatadorConfig {
 
   /** Shutdown configuration */
   readonly shutdownConfig?: Partial<ShutdownConfig> | undefined;
+
+  /**
+   * Checkpoint store for resumable subscribers.
+   * Required for persisting io() results across retries.
+   * If not provided, resumable subscribers will work but checkpoints
+   * won't persist across retries.
+   */
+  readonly checkpointStore?: CheckpointStore | undefined;
 }
 
 /**
@@ -104,6 +113,7 @@ export class Matador {
       codec: this.codec,
       retryPolicy: this.retryPolicy,
       hooks: this.hooks,
+      checkpointStore: config.checkpointStore,
     });
 
     // Create fanout engine

@@ -25,7 +25,17 @@ export { MatadorEvent } from './event.js';
 
 export type {
   AnySubscriber,
+  BaseSubscriberOptions,
+  CreateResumableSubscriberInput,
+  CreateStandardSubscriberInput,
+  CreateSubscriberInput,
   EnvelopeOf,
+  ResumableCallback,
+  ResumableSubscriber,
+  ResumableSubscriberOptions,
+  StandardCallback,
+  StandardSubscriber,
+  StandardSubscriberOptions,
   Subscriber,
   SubscriberCallback,
   SubscriberDefinition,
@@ -35,6 +45,8 @@ export type {
 export {
   createSubscriber,
   createSubscriberStub,
+  isResumableSubscriber,
+  isStandardSubscriber,
   isSubscriber,
   isSubscriberStub,
 } from './subscriber.js';

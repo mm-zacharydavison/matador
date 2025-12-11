@@ -205,3 +205,26 @@ export {
   // Utility
   hasDescription,
 } from './errors/index.js';
+
+// Checkpoint (Resumable Subscribers)
+export type {
+  Checkpoint,
+  CheckpointClearedContext,
+  CheckpointHitContext,
+  CheckpointLoadedContext,
+  CheckpointMissContext,
+  CheckpointStore,
+  JsonSerializable,
+  ResumableContextConfig,
+  ResumableContextHooks,
+  SubscriberContext,
+} from './checkpoint/index.js';
+export {
+  CheckpointStoreError,
+  DuplicateIoKeyError,
+  MemoryCheckpointStore,
+  NoOpCheckpointStore,
+  ResumableContext,
+  isCheckpointStoreError,
+  isDuplicateIoKeyError,
+} from './checkpoint/index.js';

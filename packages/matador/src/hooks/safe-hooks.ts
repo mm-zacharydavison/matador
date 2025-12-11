@@ -1,3 +1,9 @@
+import type {
+  CheckpointClearedContext,
+  CheckpointHitContext,
+  CheckpointLoadedContext,
+  CheckpointMissContext,
+} from '../checkpoint/index.js';
 import type { ConnectionState } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
 import {
@@ -176,6 +182,32 @@ export class SafeHooks {
       );
       return undefined;
     }
+  }
+
+  // === Checkpoint Hooks ===
+
+  async onCheckpointLoaded(context: CheckpointLoadedContext): Promise<void> {
+    await this.safeCall('onCheckpointLoaded', () =>
+      this.hooks.onCheckpointLoaded?.(context),
+    );
+  }
+
+  async onCheckpointHit(context: CheckpointHitContext): Promise<void> {
+    await this.safeCall('onCheckpointHit', () =>
+      this.hooks.onCheckpointHit?.(context),
+    );
+  }
+
+  async onCheckpointMiss(context: CheckpointMissContext): Promise<void> {
+    await this.safeCall('onCheckpointMiss', () =>
+      this.hooks.onCheckpointMiss?.(context),
+    );
+  }
+
+  async onCheckpointCleared(context: CheckpointClearedContext): Promise<void> {
+    await this.safeCall('onCheckpointCleared', () =>
+      this.hooks.onCheckpointCleared?.(context),
+    );
   }
 
   private async safeCall(

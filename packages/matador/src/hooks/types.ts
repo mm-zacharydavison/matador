@@ -1,3 +1,9 @@
+import type {
+  CheckpointClearedContext,
+  CheckpointHitContext,
+  CheckpointLoadedContext,
+  CheckpointMissContext,
+} from '../checkpoint/index.js';
 import type { RetryDecision } from '../retry/index.js';
 import type { ConnectionState, Transport } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
@@ -213,4 +219,30 @@ export interface MatadorHooks {
   getMaxDeliveries?(
     envelope: Envelope,
   ): number | undefined | Promise<number | undefined>;
+
+  // === Checkpoint Hooks (Resumable Subscribers) ===
+
+  /**
+   * Called when a checkpoint is loaded for a retry.
+   * Only fires for resumable subscribers on retry attempts.
+   */
+  onCheckpointLoaded?(context: CheckpointLoadedContext): void | Promise<void>;
+
+  /**
+   * Called when an io() operation uses a cached value (checkpoint hit).
+   * Useful for observability and metrics.
+   */
+  onCheckpointHit?(context: CheckpointHitContext): void | Promise<void>;
+
+  /**
+   * Called when an io() operation executes (cache miss).
+   * Useful for observability and metrics.
+   */
+  onCheckpointMiss?(context: CheckpointMissContext): void | Promise<void>;
+
+  /**
+   * Called when a checkpoint is cleared.
+   * Fires on successful completion or when moving to dead-letter queue.
+   */
+  onCheckpointCleared?(context: CheckpointClearedContext): void | Promise<void>;
 }

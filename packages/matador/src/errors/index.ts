@@ -47,3 +47,11 @@ export {
   // Timeout errors
   TimeoutError,
 } from './matador-errors.js';
+
+export {
+  // Checkpoint errors
+  CheckpointStoreError,
+  DuplicateIoKeyError,
+  isCheckpointStoreError,
+  isDuplicateIoKeyError,
+} from './checkpoint-errors.js';

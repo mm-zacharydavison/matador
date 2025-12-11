@@ -123,7 +123,11 @@ export class StandardRetryPolicy implements RetryPolicy {
     }
 
     // 6. Non-idempotent subscriber on redelivery
-    if (receipt.redelivered && subscriber.idempotent === 'no') {
+    // 'no' and 'unknown' are treated the same (safer default)
+    if (
+      receipt.redelivered &&
+      (subscriber.idempotent === 'no' || subscriber.idempotent === 'unknown')
+    ) {
       const idempotentError = new IdempotentMessageCannotRetryError(
         envelope.id,
         subscriber.name,
