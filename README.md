@@ -91,16 +91,29 @@ const myMatadorSchema = MatadorSchema = {
 ### Instantiate Matador and send events
 
 ```ts
-const matador = new Matador({ schema: myMatadorSchema })
-```
+// Create topology
+const topology = TopologyBuilder.create()
+  .withNamespace('my-app')
+  .addQueue('events')
+  .build();
 
-> TODO: Make sure all required arguments for `new Matador` are included in this example.
+// Create transport
+const transport = new RabbitMQTransport({ url: 'amqp://localhost' });
+
+// Create Matador instance
+const matador = new Matador({
+  transport,
+  topology,
+  schema: myMatadorSchema,
+  consumeFrom: ['events'],  // Queues to consume from (optional, empty = producer only)
+});
+
+await matador.start();
+```
 
 ```ts
-await matador.send(UserLoggedIn, { data: { userId: '123' }, metadata: { loginMethod: 'email' } })
+await matador.send(UserLoggedInEvent, { userId: '123', username: 'john' });
 ```
-
-> TODO: Check this example syntax is correct.
 
 # Concepts
 
@@ -256,17 +269,13 @@ When events fail, they are pushed into the retry queue. They will then be re-del
 
 In **Matador**, _unhandled_ refers to a message that was consumed by a worker but is not in your `MatadorSchema`.
 This can happen during deployments, where your publisher has already been deployed, but your consumer has not, and therefore your consumer doesn't know about the event yet.
-Since the most common reason for this (99.99% of the time in our experience) is simply deployment timing, _unhandled_ events will be requeued after a TTL. 
-
-> TODO: Specify the TTL.
+Since the most common reason for this (99.99% of the time in our experience) is simply deployment timing, _unhandled_ events are sent to the unhandled dead-letter queue for later inspection and manual reprocessing.
 
 #### Undeliverable Queue
 
 Undeliverable is a conventional term for messages that could not be successfully processed.
-After a configured amount of retries, a message will be sent to the undeliverable queue and left there for inspection.
-By default, this queue is not cleared by **Matador**, although there is a default size limit.
-
-> TODO: Specify the default size limit.
+After a configured amount of retries (default: 3 attempts), a message will be sent to the undeliverable queue and left there for inspection.
+By default, this queue is not cleared by **Matador**. You can optionally configure a `maxLength` on the dead-letter queue via the `DeadLetterQueueConfig`.
 
 ### `Codec`
 
@@ -279,11 +288,86 @@ When using `RabbitMQ`, `RabbitMQCodec` is used, which still uses `JSONCodec` int
 
 ### `Config`
 
-> TODO: List all config options and description of each.
+**Matador** is configured via the `MatadorConfig` interface:
+
+| Property          | Required | Description                                                                                              |
+| ----------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `transport`       | Yes      | Transport for message delivery (e.g., `RabbitMQTransport`, `LocalTransport`, `MultiTransport`)           |
+| `topology`        | Yes      | Topology configuration defining queues, dead-letter, and retry settings                                  |
+| `schema`          | Yes      | Event schema mapping event keys to event classes and subscribers                                         |
+| `consumeFrom`     | No       | Array of queue names to consume from (empty = producer only mode)                                        |
+| `codec`           | No       | Custom codec for serialization (defaults to `JsonCodec`)                                                 |
+| `retryPolicy`     | No       | Custom retry policy (defaults to `StandardRetryPolicy` with 3 max attempts)                              |
+| `shutdownConfig`  | No       | Shutdown configuration (drain timeout, etc.)                                                             |
+| `checkpointStore` | No       | Checkpoint store for resumable subscribers (required for persisting `io()` results across retries)       |
+
+**Topology** is configured via `TopologyBuilder`:
+
+| Property       | Default | Description                                              |
+| -------------- | ------- | -------------------------------------------------------- |
+| `namespace`    | -       | Prefix for all queue names (required)                    |
+| `queues`       | -       | Array of queue definitions (at least one required)       |
+| `deadLetter`   | enabled | Dead-letter queue configuration (unhandled/undeliverable)|
+| `retry`        | enabled | Retry queue configuration (defaultDelayMs: 1000ms, maxDelayMs: 5 minutes) |
+
+**Queue Definition** options:
+
+| Property          | Default | Description                                                |
+| ----------------- | ------- | ---------------------------------------------------------- |
+| `name`            | -       | Queue name (required)                                      |
+| `concurrency`     | -       | Number of concurrent consumers for this queue              |
+| `consumerTimeout` | -       | Consumer timeout in milliseconds                           |
+| `priorities`      | false   | Enable priority support if transport allows                |
+| `exact`           | false   | Use queue name exactly without namespace prefix            |
+
+**Retry Policy** defaults (`StandardRetryPolicy`):
+
+| Property           | Default  | Description                                              |
+| ------------------ | -------- | -------------------------------------------------------- |
+| `maxAttempts`      | 3        | Maximum retry attempts before dead-lettering             |
+| `baseDelay`        | 1000ms   | Base delay between retries                               |
+| `maxDelay`         | 300000ms | Maximum delay (5 minutes)                                |
+| `backoffMultiplier`| 2        | Multiplier for exponential backoff                       |
+| `maxDeliveries`    | 5        | Max native delivery count before poison detection        |
 
 ### `Hooks`
 
-> TODO: List all hooks and description of each.
+Hooks are passed as the second argument to the `Matador` constructor and provide lifecycle callbacks for observability and dynamic configuration.
+
+**Lifecycle Hooks:**
+
+| Hook                     | Description                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `logger`                 | Logger instance for internal Matador logging (defaults to console)                    |
+| `onEnqueueSuccess`       | Called when an event is successfully enqueued                                         |
+| `onEnqueueWarning`       | Called when enqueue falls back to a secondary queue                                   |
+| `onTransportFallback`    | Called when transport fallback occurs (MultiTransport with fallbackEnabled)           |
+| `onEnqueueError`         | Called when enqueue fails completely                                                  |
+| `onWorkerWrap`           | Wraps entire worker processing (for APM context like DataDog, NewRelic)               |
+| `onWorkerBeforeProcess`  | Called before processing begins                                                       |
+| `onWorkerSuccess`        | Called after successful processing                                                    |
+| `onWorkerError`          | Called after processing error                                                         |
+| `onDecodeError`          | Called when message decoding fails                                                    |
+| `onConnectionStateChange`| Called when transport connection state changes                                        |
+
+**Dynamic Configuration Hooks:**
+
+| Hook                     | Description                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `loadUniversalMetadata`  | Loads metadata to add to all envelopes (e.g., correlationId from AsyncLocalStorage)   |
+| `getQueueConcurrency`    | Dynamic queue concurrency lookup                                                      |
+| `getRetryDelay`          | Dynamic retry delay lookup                                                            |
+| `getAttempts`            | Dynamic max attempts lookup                                                           |
+| `getMaxDeliveries`       | Dynamic max deliveries (poison threshold) lookup                                      |
+
+**Checkpoint Hooks (Resumable Subscribers):**
+
+| Hook                     | Description                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `onCheckpointLoaded`     | Called when a checkpoint is loaded for a retry                                        |
+| `onCheckpointHit`        | Called when an `io()` operation uses a cached value                                   |
+| `onCheckpointMiss`       | Called when an `io()` operation executes (cache miss)                                 |
+| `onCheckpointCleared`    | Called when a checkpoint is cleared (success or dead-letter)                          |
 
 ### `idempotent`
 
@@ -313,7 +397,28 @@ This is because both the _publisher_ and the _consumer_ need to know about the e
 
 You can either share the code for your `MatadorSchema`, or you can make your workers simply be different instances of the same codebase (with different configuration).
 
-> TODO: Include example of Matador config that is dynamic (e.g. from marketing-pf)
+```ts
+// Example: Dynamic configuration based on environment
+const matador = new Matador(
+  {
+    transport,
+    topology,
+    schema: myMatadorSchema,
+    // Only consume in worker mode
+    consumeFrom: process.env.WORKER_MODE === 'true' ? ['events'] : [],
+  },
+  {
+    // Dynamic hooks can use runtime config
+    getAttempts: async (envelope) => {
+      // High-importance events get more retries
+      if (envelope.docket.importance === 'must-investigate') {
+        return 5;
+      }
+      return 3;
+    },
+  }
+);
+```
 
 ### You want `at-least-once` delivery.
 
@@ -324,20 +429,93 @@ There are two options for delivery in an event system.
 
 Any system that promises `exactly-once` is lying to you, because there are always timeout scenarios in a distributed system that mean that there may still be a very small possibility of a message being either delivered multiple times (`at-least-once`) or not at all (`at-most-once`).
 
-The choice essential comes down to when you `ack` a message.
+The choice essentially comes down to when you `ack` (acknowledge) a message.
 
-- Before processing: `at-most-once`.
-- After processing: `at least-once`.
+- **Before processing**: `at-most-once`. If the worker crashes after ack but before completing, the message is lost.
+- **After processing**: `at-least-once`. If the worker crashes after completing but before ack, the message may be redelivered.
 
-> TODO: Are these statements correct?
+**Matador** uses `at-least-once` delivery by acknowledging messages only after successful processing.
 
 # Logging
 
-> TODO: List all possible logs emitted by Matador.
+**Matador** uses a pluggable logger interface. You can provide your own logger via the `logger` hook:
+
+```ts
+const matador = new Matador(config, {
+  logger: {
+    debug: (msg, ...args) => myLogger.debug(msg, ...args),
+    info: (msg, ...args) => myLogger.info(msg, ...args),
+    warn: (msg, ...args) => myLogger.warn(msg, ...args),
+    error: (msg, ...args) => myLogger.error(msg, ...args),
+  },
+});
+```
+
+### Log Messages by Level
+
+**Debug:**
+
+| Message                                               | Context                                            |
+| ----------------------------------------------------- | -------------------------------------------------- |
+| `[Matador] 🔌 Delayed message exchange plugin detected` | RabbitMQ delayed message plugin is available       |
+
+**Warn:**
+
+| Message                                                                   | Context                                                    |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `[Matador] 🟡 RabbitMQ delayed message exchange plugin not available...`  | RabbitMQ plugin not installed, delayed messages disabled   |
+| `[Matador] ⚠️ Shutdown timeout reached with N events still processing`    | Graceful shutdown timed out with pending events            |
+| `[Matador] 🟡 Hook onWorkerWrap threw an error`                           | The `onWorkerWrap` hook threw an exception                 |
+| `[Matador] 🟡 Hook loadUniversalMetadata threw an error`                  | The `loadUniversalMetadata` hook threw an exception        |
+| `[Matador] 🟡 Hook getQueueConcurrency threw an error`                    | The `getQueueConcurrency` hook threw an exception          |
+| `[Matador] 🟡 Hook getRetryDelay threw an error`                          | The `getRetryDelay` hook threw an exception                |
+| `[Matador] 🟡 Hook getAttempts threw an error`                            | The `getAttempts` hook threw an exception                  |
+| `[Matador] 🟡 Hook getMaxDeliveries threw an error`                       | The `getMaxDeliveries` hook threw an exception             |
+| `[Matador] 🟡 Hook {hookName} threw an error`                             | Any other lifecycle hook threw an exception                |
+
+**Error:**
+
+| Message                                               | Context                                                     |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| `[Matador] 🔴 RabbitMQ connection error`              | RabbitMQ connection encountered an error                    |
+| `[Matador] 🔴 RabbitMQ publish channel error`         | RabbitMQ publish channel encountered an error               |
+| `[Matador] 🔴 Handler error in message processing`    | Subscriber callback threw an unhandled exception            |
+| `[Matador] 🔴 Failed to enqueue delayed message`      | LocalTransport failed to enqueue a delayed message          |
+
+For application-level logging (event processing, success/failure tracking), use the lifecycle hooks (`onWorkerSuccess`, `onWorkerError`, `onEnqueueSuccess`, etc.).
 
 # Errors
 
-> TODO: List all possible errors emitted by Matador (and description of each)
+All errors in **Matador** extend `MatadorError` and include a `description` field explaining the cause and recommended action.
+
+| Error                             | Description                                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `NotStartedError`                 | Matador has not been started. Call `matador.start()` first.                                |
+| `ShutdownInProgressError`         | Matador is shutting down and will not accept new events.                                   |
+| `TransportNotConnectedError`      | Transport is not connected to the message broker.                                          |
+| `TransportClosedError`            | Transport has been closed (during shutdown).                                               |
+| `AllTransportsFailedError`        | All transports in a fallback chain failed.                                                 |
+| `TransportSendError`              | Failed to send a message through the transport.                                            |
+| `DelayedMessagesNotSupportedError`| Delayed messages requested but transport doesn't support them.                             |
+| `EventNotRegisteredError`         | Event type is not registered in the schema.                                                |
+| `SubscriberNotRegisteredError`    | Subscriber is not registered for this event.                                               |
+| `NoSubscribersExistError`         | Event has no subscribers registered.                                                       |
+| `InvalidSchemaError`              | Schema configuration is invalid.                                                           |
+| `SubscriberIsStubError`           | A SubscriberStub was registered in a consuming schema.                                     |
+| `LocalTransportCannotProcessStubError` | LocalTransport cannot process events for SubscriberStubs.                             |
+| `QueueNotFoundError`              | Queue does not exist or has not been created.                                              |
+| `InvalidEventError`               | Event is invalid or missing required fields.                                               |
+| `MessageMaybePoisonedError`       | Message redelivered too many times (possible poison message).                              |
+| `IdempotentMessageCannotRetryError` | Non-idempotent subscriber received a redelivered message.                                |
+| `TimeoutError`                    | Operation timed out before completing.                                                     |
+
+**Retry Control Errors** (thrown by subscribers to control retry behavior):
+
+| Error                | Description                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| `DoRetry`            | Forces retry regardless of subscriber idempotency setting.                                     |
+| `DontRetry`          | Prevents retry regardless of subscriber idempotency setting. Message goes to dead-letter.      |
+| `EventAssertionError`| Assertion error that should never be retried. Goes directly to dead-letter queue.              |
 
 # Other features
 
@@ -364,32 +542,66 @@ loadUniversalMetadata: () => {
 ### Schema plugins
 
 Sometimes, you want to run a subscriber on every event in your _schema_.
-Instead of defining the subscriber mapping for every event, you can use _schema plugins_ to do this:
+Instead of defining the subscriber mapping for every event, you can create a utility function to add subscribers across all events:
 
 ```ts
-const myMatadorSchema = MatadorSchema = installPlugins({
-  [UserLoggedInEvent.key]: [UserLoggedInEvent, bind([ detectLoginFraud ])],
-  [UserLoggedOutEvent.key]: [UserLoggedOutEvent, bind([])],
-  [ChatMessageSent.key]: [ChatMessageSent, bind([ notifyUser ])]
-},
-  [
-    {
-      subscriber: uploadEventToBigQuery,
-      exclusions: [
-        ChatMessageSent.key,
-      ],
-    },
-  ])
-```
+// Helper function to add a subscriber to all events
+function withGlobalSubscriber<T extends MatadorSchema>(
+  schema: T,
+  subscriber: AnySubscriber,
+  exclusions: string[] = [],
+): T {
+  const result = { ...schema };
+  for (const [key, entry] of Object.entries(schema)) {
+    if (exclusions.includes(key)) continue;
+    const [eventClass, subscribers] = entry as SchemaEntryTuple;
+    result[key] = [eventClass, [...subscribers, subscriber]];
+  }
+  return result as T;
+}
 
-> TODO: Ensure this is actually possible in Matador V2 and add the functionality if not.
+// Usage
+const baseSchema: MatadorSchema = {
+  [UserLoggedInEvent.key]: [UserLoggedInEvent, bind([detectLoginFraud])],
+  [UserLoggedOutEvent.key]: [UserLoggedOutEvent, bind([])],
+  [ChatMessageSent.key]: [ChatMessageSent, bind([notifyUser])],
+};
+
+const myMatadorSchema = withGlobalSubscriber(
+  baseSchema,
+  uploadEventToBigQuery,
+  [ChatMessageSent.key], // Exclude chat messages from BigQuery
+);
+```
 
 ### `DoRetry` & `DontRetry`
 
 Sometimes, your subscribers may want to explicitly control if they should be retried or not.
 This is useful in cases where a message is _sometimes_ idempotent, but in certain cases (e.g. error scenarios) it is not.
 
-> TODO: Add an example here.
+```ts
+import { DoRetry, DontRetry } from '@meetsmore/matador-v2';
+
+const processPayment: Subscriber<PaymentRequestedEvent> = {
+  name: 'process-payment',
+  idempotent: 'no', // Default: don't retry
+  callback: async (envelope) => {
+    try {
+      await paymentGateway.charge(envelope.data.amount);
+    } catch (error) {
+      if (error.code === 'TEMPORARY_FAILURE') {
+        // Gateway is temporarily unavailable, safe to retry
+        throw new DoRetry('Payment gateway temporarily unavailable');
+      }
+      if (error.code === 'CARD_DECLINED') {
+        // Permanent failure, don't retry
+        throw new DontRetry('Card was declined');
+      }
+      throw error; // Default behavior based on idempotent setting
+    }
+  },
+};
+```
 
 ### `LocalTransport`
 
@@ -404,16 +616,65 @@ You can also use configure it with `fallbackEnabled` (default: `true`), and if e
 
 You can combine this with `LocalTransport` to make messages that fail to enqueue execute locally, providing resilience against your message broker being unavailable or timing out.
 
-> TODO: Add example with RabbitMQTransport + LocalTransport
+```ts
+import { MultiTransport, RabbitMQTransport, LocalTransport } from '@meetsmore/matador-v2';
+
+const rabbitTransport = new RabbitMQTransport({ url: 'amqp://localhost' });
+const localTransport = new LocalTransport();
+
+const transport = new MultiTransport(
+  {
+    transports: [rabbitTransport, localTransport],
+    fallbackEnabled: true, // Default: true
+  },
+  {
+    // Optional: dynamically select backend based on feature flags
+    getDesiredBackend: async () => {
+      if (process.env.SANDBOX === 'true') return 'local';
+      const useLocal = await featureFlags.isEnabled('use-local-transport');
+      return useLocal ? 'local' : 'rabbitmq';
+    },
+    // Optional: log when fallback occurs
+    onEnqueueFallback: (ctx) => {
+      console.warn(`Fallback from ${ctx.failedTransport} to ${ctx.nextTransport}: ${ctx.error.message}`);
+    },
+  }
+);
+
+const matador = new Matador({
+  transport,
+  topology,
+  schema,
+  consumeFrom: ['events'],
+});
+```
 
 ### `enabled()` hook for `Subscriber`
 
 Sometimes, you want to enable / disable subscribers at runtime using feature flags.
 
-Each subscriber accepts and `enabled()` callback, which will be invoked before publishing or consuming an event.
+Each subscriber accepts an `enabled()` callback, which is invoked before **publishing** an event for that subscriber. If `enabled()` returns `false`, the message is not sent for that subscriber (it's skipped during fanout). If the check fails with an error, the subscriber is treated as enabled.
 
-> TODO: Is this true? or does it only disable publishing?
-> TODO: Add examples
+```ts
+const sendWelcomeEmail: Subscriber<UserCreatedEvent> = {
+  name: 'send-welcome-email',
+  idempotent: 'yes',
+  enabled: async () => {
+    // Check feature flag
+    return await featureFlags.isEnabled('welcome-email-v2');
+  },
+  callback: async (envelope) => {
+    await emailService.sendWelcome(envelope.data.email);
+  },
+};
+
+// Sync enabled check is also supported
+const legacySubscriber: Subscriber<UserCreatedEvent> = {
+  name: 'legacy-handler',
+  enabled: () => process.env.ENABLE_LEGACY === 'true',
+  callback: async (envelope) => { /* ... */ },
+};
+```
 
 ### `importance`
 
@@ -422,7 +683,37 @@ This is useful for setting up alerts in your observability platform.
 
 For example, if an analytics event fails, it is likely unimportant, but if a payment related subscriber fails, it warrants investigation and should trigger an alert.
 
-> TODO: Add example.
+Available importance levels:
+- `'can-ignore'` - Failures are not critical (e.g., analytics, logging)
+- `'should-investigate'` - Failures should be reviewed (default)
+- `'must-investigate'` - Failures are critical and require immediate attention (e.g., payments)
+
+```ts
+const trackAnalytics: Subscriber<UserCreatedEvent> = {
+  name: 'track-analytics',
+  importance: 'can-ignore', // Don't alert on failures
+  callback: async (envelope) => {
+    await analytics.track('user_created', envelope.data);
+  },
+};
+
+const processPayment: Subscriber<PaymentRequestedEvent> = {
+  name: 'process-payment',
+  importance: 'must-investigate', // Critical - alert immediately on failures
+  callback: async (envelope) => {
+    await paymentGateway.charge(envelope.data);
+  },
+};
+
+// Use in hooks for alerting
+const matador = new Matador(config, {
+  onWorkerError: (ctx) => {
+    if (ctx.subscriber.importance === 'must-investigate') {
+      alerting.critical(`Subscriber ${ctx.subscriber.name} failed: ${ctx.error.message}`);
+    }
+  },
+});
+```
 
 ### Delayed messages
 
@@ -434,20 +725,46 @@ When using `RabbitMQTransport`, this is implemented using the [delayed-message-e
 
 > Note: Distributed event systems do not have precise delivery timings. The consumption of your event will be dependent on your throughput, and you should not depend on delayed messages for accurate timings.
 
-> TODO: Add example.
+```ts
+// Delay message by 5 minutes
+await matador.send(ReminderEvent, { userId: '123', message: 'Hello!' }, {
+  delayMs: 5 * 60 * 1000, // 5 minutes
+});
+
+// Delay can also be used with correlationId and metadata
+await matador.send(ScheduledNotificationEvent, notificationData, {
+  delayMs: 60000, // 1 minute
+  correlationId: 'notification-123',
+  metadata: { scheduledBy: 'cron-job' },
+});
+```
 
 # CLI
 
-> TODO: Verify this is the right command.
-
-Matador provides a `cli` utility for quick local testing of your Matador configuration.
+Matador provides a CLI utility for quick local testing of your Matador configuration.
 
 ```bash
-bunx matador cli <path-to-config-file> <path-to-event-file>
+bunx matador-cli <path-to-config-file> <path-to-event-file>
 ```
 
-You can send a quick test event using.
+**Options:**
+- `--help, -h` - Show help message
+- `--dry-run` - Validate config and event without dispatching
+- `--timeout` - Timeout in milliseconds for processing (default: 5000)
+- `--verbose` - Show verbose output including all hook logs
 
+**Config file** should export:
+- `schema: MatadorSchema` - Map of event keys to [EventClass, Subscribers[]]
+- `topology?: Topology` - Optional topology (defaults to simple 'events' queue)
+- `hooks?: MatadorHooks` - Optional hooks
+
+**Event file** should export:
+- `eventKey: string` - The key of the event to dispatch
+- `data: unknown` - The event data payload
+- `before?: unknown` - Optional 'before' data for change events
+- `options?: EventOptions` - Optional dispatch options (correlationId, metadata, delayMs)
+
+**Example:**
 ```bash
-bunx matador cli send-test-event
+bunx matador-cli ./my-config.ts ./test-event.ts --verbose
 ```
