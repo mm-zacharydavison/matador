@@ -27,6 +27,7 @@ An opinionated, batteries-included framework for using event transports (e.g. `R
   - [Config](#config)
   - [Hooks](#hooks)
   - [idempotent](#idempotent)
+  - [ResumableSubscriber](#resumablesubscriber)
 - [Why it works this way](#why-it-works-this-way)
   - [Sending one message will result in a unique message per subscriber](#sending-one-message-will-result-in-a-unique-message-per-subscriber)
   - [You are working in a monorepo](#you-are-working-in-a-monorepo)
@@ -310,7 +311,7 @@ When events fail, they are pushed into the retry queue. They will then be re-del
 
 In **Matador**, _unhandled_ refers to a message that was consumed by a worker but is not in your `MatadorSchema`.
 This can happen during deployments, where your publisher has already been deployed, but your consumer has not, and therefore your consumer doesn't know about the event yet.
-Since the most common reason for this (99.99% of the time in our experience) is simply deployment timing, _unhandled_ events are sent to the unhandled dead-letter queue for later inspection and manual reprocessing.
+Since the most common reason for this (99.99% of the time in our experience) is simply deployment timing, _unhandled_ events are automatically retried using the same retry policy as failed messages. After max attempts are exhausted, they are sent to the unhandled dead-letter queue for inspection.
 
 #### Undeliverable Queue
 
@@ -433,6 +434,8 @@ In **Matador**, `idempotent` has a very close meaning, but ultimately just means
 | `'resumable'` | Subscriber uses `io()` for checkpoint-based idempotency          | Retries allowed, checkpoint loaded |
 
 ### `ResumableSubscriber`
+
+> ⚠️ This feature is experimental and not tested in production. 
 
 Matador supports durable / resumable subscribers.
 

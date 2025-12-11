@@ -7,6 +7,7 @@ import {
 } from '../errors/index.js';
 import type { SafeHooks } from '../hooks/index.js';
 import type { RetryDecision, RetryPolicy } from '../retry/index.js';
+import { StandardRetryPolicy } from '../retry/index.js';
 import type { SchemaRegistry } from '../schema/index.js';
 import type { MessageReceipt, Transport } from '../transport/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
@@ -166,7 +167,39 @@ describe('ProcessingPipeline', () => {
       );
     });
 
-    it('should handle missing subscriber definition', async () => {
+    it('should retry missing subscriber definition (deployment timing)', async () => {
+      const envelope = createTestEnvelope();
+      const sendMock = mock(async () => 'mock-id');
+      const completeMock = mock(async () => {});
+
+      const config = createMockConfig({
+        codec: {
+          decode: mock(() => envelope),
+        },
+        schema: {
+          getSubscriberDefinition: mock(() => undefined),
+        },
+        transport: {
+          send: sendMock,
+          complete: completeMock,
+        },
+        retryPolicy: new StandardRetryPolicy(),
+      });
+
+      const pipeline = new ProcessingPipeline(config);
+      const receipt = createReceipt();
+
+      const result = await pipeline.process(new Uint8Array(), receipt);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(SubscriberNotRegisteredError);
+      expect(result.envelope).toBeDefined();
+      expect(result.decision?.action).toBe('retry');
+      expect(sendMock).toHaveBeenCalled();
+      expect(completeMock).toHaveBeenCalled();
+    });
+
+    it('should dead-letter missing subscriber after max attempts', async () => {
       const envelope = createTestEnvelope();
       const sendToDeadLetterMock = mock(async () => {});
 
@@ -181,6 +214,39 @@ describe('ProcessingPipeline', () => {
           sendToDeadLetter: sendToDeadLetterMock,
           complete: mock(async () => {}),
         },
+        retryPolicy: new StandardRetryPolicy(),
+      });
+
+      const pipeline = new ProcessingPipeline(config);
+      const receipt = createReceipt({ attemptNumber: 3 }); // At max attempts
+
+      const result = await pipeline.process(new Uint8Array(), receipt);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(SubscriberNotRegisteredError);
+      expect(result.decision?.action).toBe('dead-letter');
+      expect(sendToDeadLetterMock).toHaveBeenCalled();
+    });
+
+    it('should retry subscriber stub (deployment timing)', async () => {
+      const envelope = createTestEnvelope();
+      const subscriberDef = createSubscriberDefinition();
+      const sendMock = mock(async () => 'mock-id');
+      const completeMock = mock(async () => {});
+
+      const config = createMockConfig({
+        codec: {
+          decode: mock(() => envelope),
+        },
+        schema: {
+          getSubscriberDefinition: mock(() => subscriberDef),
+          getExecutableSubscriber: mock(() => undefined),
+        },
+        transport: {
+          send: sendMock,
+          complete: completeMock,
+        },
+        retryPolicy: new StandardRetryPolicy(),
       });
 
       const pipeline = new ProcessingPipeline(config);
@@ -189,12 +255,14 @@ describe('ProcessingPipeline', () => {
       const result = await pipeline.process(new Uint8Array(), receipt);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(SubscriberNotRegisteredError);
-      expect(result.envelope).toEqual(envelope);
-      expect(sendToDeadLetterMock).toHaveBeenCalled();
+      expect(result.error).toBeInstanceOf(SubscriberIsStubError);
+      expect(result.subscriber).toEqual(subscriberDef);
+      expect(result.decision?.action).toBe('retry');
+      expect(sendMock).toHaveBeenCalled();
+      expect(completeMock).toHaveBeenCalled();
     });
 
-    it('should handle subscriber stub', async () => {
+    it('should dead-letter subscriber stub after max attempts', async () => {
       const envelope = createTestEnvelope();
       const subscriberDef = createSubscriberDefinition();
       const sendToDeadLetterMock = mock(async () => {});
@@ -211,16 +279,17 @@ describe('ProcessingPipeline', () => {
           sendToDeadLetter: sendToDeadLetterMock,
           complete: mock(async () => {}),
         },
+        retryPolicy: new StandardRetryPolicy(),
       });
 
       const pipeline = new ProcessingPipeline(config);
-      const receipt = createReceipt();
+      const receipt = createReceipt({ attemptNumber: 3 }); // At max attempts
 
       const result = await pipeline.process(new Uint8Array(), receipt);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeInstanceOf(SubscriberIsStubError);
-      expect(result.subscriber).toEqual(subscriberDef);
+      expect(result.decision?.action).toBe('dead-letter');
       expect(sendToDeadLetterMock).toHaveBeenCalled();
     });
   });
@@ -1074,7 +1143,7 @@ function createMockConfig(
     transport: Partial<Transport>;
     schema: Partial<SchemaRegistry>;
     codec: Partial<Codec>;
-    retryPolicy: Partial<RetryPolicy>;
+    retryPolicy: RetryPolicy | Partial<RetryPolicy>;
     hooks: Partial<SafeHooks>;
   }> = {},
 ): PipelineConfig {
@@ -1115,16 +1184,32 @@ function createMockConfig(
     ...overrides.codec,
   };
 
-  const defaultRetryPolicy: RetryPolicy = {
-    shouldRetry: mock(
-      (): RetryDecision => ({
-        action: 'discard' as const,
-        reason: 'default',
-      }),
-    ),
-    getDelay: mock(() => 1000),
-    ...overrides.retryPolicy,
+  // If retryPolicy is a full implementation (has both methods), use it directly
+  // Otherwise, merge with defaults
+  const isFullRetryPolicy = (
+    p: RetryPolicy | Partial<RetryPolicy> | undefined,
+  ): p is RetryPolicy => {
+    return (
+      p !== undefined &&
+      'shouldRetry' in p &&
+      'getDelay' in p &&
+      typeof p.shouldRetry === 'function' &&
+      typeof p.getDelay === 'function'
+    );
   };
+
+  const defaultRetryPolicy: RetryPolicy = isFullRetryPolicy(overrides.retryPolicy)
+    ? overrides.retryPolicy
+    : {
+        shouldRetry: mock(
+          (): RetryDecision => ({
+            action: 'discard' as const,
+            reason: 'default',
+          }),
+        ),
+        getDelay: mock(() => 1000),
+        ...overrides.retryPolicy,
+      };
 
   const defaultHooks: SafeHooks = {
     onWorkerWrap: async (

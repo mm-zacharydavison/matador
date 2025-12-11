@@ -109,17 +109,16 @@ export class ProcessingPipeline {
         envelope.docket.targetSubscriber,
         envelope.docket.eventKey,
       );
-      await this.sendToDeadLetter(
-        receipt,
-        envelope,
-        'unhandled',
-        error.message,
-      );
+
+      // Retry unhandled messages (likely deployment timing issue)
+      const decision = this.getUnhandledRetryDecision(envelope, receipt, error);
+      await this.handleRetryDecision(receipt, envelope, decision);
 
       return {
         success: false,
         envelope,
         error,
+        decision,
         durationMs: performance.now() - startTime,
       };
     }
@@ -133,18 +132,17 @@ export class ProcessingPipeline {
     if (!subscriber) {
       // Subscriber is a stub (remote implementation)
       const error = new SubscriberIsStubError(envelope.docket.targetSubscriber);
-      await this.sendToDeadLetter(
-        receipt,
-        envelope,
-        'unhandled',
-        error.message,
-      );
+
+      // Retry stub messages (likely deployment timing issue)
+      const decision = this.getUnhandledRetryDecision(envelope, receipt, error);
+      await this.handleRetryDecision(receipt, envelope, decision);
 
       return {
         success: false,
         envelope,
         subscriber: subscriberDef,
         error,
+        decision,
         durationMs: performance.now() - startTime,
       };
     }
@@ -333,5 +331,40 @@ export class ProcessingPipeline {
       await this.transport.send(fullDlqName, envelope);
       await this.transport.complete(receipt);
     }
+  }
+
+  /**
+   * Gets retry decision for unhandled messages (subscriber not found).
+   * Uses same retry policy logic but sends to 'unhandled' DLQ after max attempts.
+   */
+  private getUnhandledRetryDecision(
+    envelope: Envelope,
+    receipt: MessageReceipt,
+    error: Error,
+  ): RetryDecision {
+    // Create a synthetic subscriber definition for retry policy
+    const syntheticSubscriber: SubscriberDefinition = {
+      name: envelope.docket.targetSubscriber,
+      idempotent: 'yes', // Safe to retry unhandled messages
+      importance: envelope.docket.importance ?? 'should-investigate',
+    };
+
+    const decision = this.retryPolicy.shouldRetry({
+      envelope,
+      error,
+      subscriber: syntheticSubscriber,
+      receipt,
+    });
+
+    // Override dead-letter queue to 'unhandled' instead of 'undeliverable'
+    if (decision.action === 'dead-letter') {
+      return {
+        action: 'dead-letter',
+        queue: 'unhandled',
+        reason: decision.reason,
+      };
+    }
+
+    return decision;
   }
 }
