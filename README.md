@@ -914,3 +914,11 @@ bunx matador send-test-event <config-file> [options]
 bunx matador send ./my-config.ts ./test-event.ts --verbose
 bunx matador send-test-event ./my-config.ts
 ```
+
+# Thanks
+
+Thank you to the following MeetsMore engineers who worked on our internal V1 version of Matador.
+
+Matador V2 would not exist without your contributions.
+
+- https://github.com/GuillaumeDeconinck
