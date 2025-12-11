@@ -6,542 +6,448 @@ An opinionated, batteries-included framework for using event transports (e.g. `R
 
 # Vision
 
-Matador is an _opinionated_ library, which means it makes design choices for you about how you will use events.
+Matador aims to provide a ready-to-use framework for dispatching messages and moving work off your API servers onto workers.
+It is an _opinionated_ library that may-or-may not suit your expectations about how to work with queues.
 
-- Sending one event to Matador will result in a unique event message will be sent for each subscriber (fanout).
-- The topology of the queues used by Matador is of a specific design, managed by Matador itself.
-- You are working in a monorepo.
-- Most of your usage is simply moving intensive work away from your API servers.
+You can use it to very quickly set up a framework for your events, with battle-tested conventions, edge-case coverage, and observability baked in.
 
-The goals of Matador are to provide:
+It works best under the following conditions.
 
-- An abstracted way to interact with queue backends, so that you can switch between them without refactoring in future.
-- A consistent experience for creating events and subscribers.
-- Sensible defaults for retries, dead-lettering, undeliverable messages, etc.
-- Provide good observability for everything relating to your events and subscribers.
+- You want the queue topology to be created and managed for you.
+- You are working in a monorepo, where you can easily share code.
+- You want a 1:N fanout strategy, where each _subscriber_ receives a unique copy of each event.
+- You want `at-least-once` delivery semantics.
+
+These conditions are explained later.
 
 # History
 
-We ([MeetsMore](https://meetsmore.com/)) have been using Matador since 01.2024 to handle 600,000+ successfully processed messages a day.
+Matador has been used at [MeetsMore Inc](https://meetsmore.com/) for over 2 years to publish, consume, and observe 1,000,000+ successful events per day.
 
-It has real-world features that we use daily to reliably send, consume, and monitor events.
-
-We use it with `RabbitMQ`, so that is the first-class supported broker.
-
-This version (2.0.0+) was re-written from scratch based on our learnings from the internal version.
+This version of Matador is Matador V2, and was re-written from the ground up using our learnings over that 2 year period.
 
 # Features
 
-### General
-
-- Conventional types for `Event` and `Subscriber`.
-- Map events to a list of subscribers.
-- 'Fan out' events from one dispatched event, to one event per subscriber.
-- Async configuration hooks so that important parameters can be configured at runtime using feature flags.
-- Async lifecycle hooks for plugging into your observability platform.
-- Require events to be well documented (require `description`).
-- Require subscribers to declare their idempotency type, and use this to manage retry logic automatically.
-- Require subscribers to declare their importance, so your observability can trigger correctly prioritized alerts.
-- `metadata` field for data that will not be used for business logic (e.g. useful debugging information).
-- Wait for pending enqueues and subscribers to complete work before shutting down.
-- Allow configuration of any transport for falling back to, if primary queue is down.
-- Provide an in-memory `LocalTransport`, which executes subscribers immediately on the same machine they were enqueued to (useful for fallbacks and testing).
-- Retry control flow using special errors (`DoRetry` and `DontRetry`), so subscribers can dictate retry logic.
-- Clear, actionable errors for all types of error cases.
-
-### RabbitMQ
-
+- Conventional types for `Event` and `Subscriber`
+- Map an event to a list of subscribers that will consume it.
+- Each subscriber receives a unique copy of each event that can be individually retried and re-queued.
 - Automatically create and manage your queue topology.
-- Automatically setup and configure queues and consumers.
-- Automatic re-connects on lost connection.
-- Debounce AMQP timeout errors to avoid excessive logging noise.
-- Poison message detection.
-- Channel-per-queue model enabling per-queue concurrency.
+- Automatic reconnection when connection drops.
+- Async hooks for changing behaviour at runtime.
+- Async lifecycle hooks for plugging into your observability platform.
+- Required fields enforcing good, observable documentation practices.
+- `idempotency` declaration for subscribers, allowing you to indicate if events can be retried safely or not.
+- `metadata` separated from event payloads, to clearly separate data used for logic, and data that is just used for debugging.
+- Gracefully wait for pending enqueues and subscribers to complete work before shutting down.
+- Fallback to a different message broker if enqueuing fails.
+- Local broker for executing code locally (useful for fallback).
+- Retry control flow errors (`DoRetry` and `DontRetry`), so subscribers can manually dictate retry logic.
+- Clear, documented, actionable errors for all error cases.
+- Poisoned message detection.
 
 # Getting Started
 
-#### Define an Event
-
-An `Event` in **Matador** is a base/abstract class. Your events' classes extend this base class.
-
-Events extend `MatadorEvent` and define their data type inline in the constructor:
+### Define a MatadorEvent
 
 ```ts
-class UserLoggedIn extends MatadorEvent {
-  static key: EventKey = 'user.login.successful'                          // The unique name of your event.
-  description = 'Triggered when a user logs in successfully.'             // A description of when the event is triggered.
+export class UserLoggedInEvent extends MatadorEvent {
+  static readonly key = 'user.logged-in';                   // The unique event name (used to route events).
+  static readonly description = 'Fired when a user logs.';  // A description of when the event is triggered.
 
   constructor(
-    public data: { userId: string },                                      // The data payload, required for processing.
-    public metadata?: { loginMethod: 'email' | 'social' | 'magic-link' }  // [optional] Additional data helpful for logging, debugging, or monitoring.
+    public data: {                                          // The data payload used by business logic.
+      userId: string;
+      username: string;
+    },
+    public metadata: {                                      // Additional data helpful for logging or debugging.
+      loginMethod: 'email' | 'social'
+    }
   ) {
-    super()
+    super();
   }
 }
 ```
 
-#### Define a Subscriber
-
-A `Subscriber` is a listener for events that executes when events are received.
-The event-to-subscriber mapping is done during schema registration.
+### Define a Subscriber
 
 ```ts
 const detectLoginFraud: Subscriber<UserLoggedInEvent> = {
-  name: 'detect-login-fraud',                                                   // The unique name of your subscriber.
-  idempotent: 'no',                                                             // Is this operation idempotent?
-  targetQueue: 'compliance-jobs-worker',                                        // The queue this subscriber's events should be routed to.
-  callback: async (data: UserLoggedInEvent, docket: Docket) => { /** ... */ }   // The work to perform.
+  name: 'detect-login-fraud',                                           // Unique subscriber name.
+  description: 'Send an email if unusual login behaviour is detected.'  // A description of what the subscriber does.
+  idempotent: 'no'                                                      // Dictates if the operation can be safely retried.
+  targetQueue: 'compliance-jobs-worker'                                 // The queue this subscriber consumes from.
+  callback: async (event: EnvelopeOf<UserLoggedIn>) => { /** process event */ }
 }
 ```
 
-#### Define a Schema
-
-A `MatadorSchema` is a mapping of your `Event`s to `Subscriber`s.
+### Define a Schema
 
 ```ts
-const myMatadorSchema: MatadorSchema = {
-  [UserLoggedIn.key]: [UserLoggedIn, [detectLoginFraud, logEventToBigQuery]]        // Events can have multiple subscribers.
+const myMatadorSchema = MatadorSchema = {
+  [UserLoggedIn.key]: [UserLoggedIn, bind([ detectLoginFraud, logEventToBigQuery ])]
 }
 ```
 
-#### Instantiate `Matador` and dispatch events.
+### Instantiate Matador and send events
 
 ```ts
-import { createMatador, createTopology, LocalTransport } from '@meetsmore/matador-v2'
-
-const topology = createTopology()
-  .withNamespace('my-app')
-  .addQueue('general')
-  .build()
-
-const matador = createMatador({
-  transport: new LocalTransport(),     // Or use createRabbitMQTransport({ url: '...' })
-  topology,
-  consumeFrom: ['general'],             // Queues this instance should consume from
-})
-
-matador.registerSchema(myMatadorSchema)
-await matador.start()
+const matador = new Matador({ schema: myMatadorSchema })
 ```
+
+> TODO: Make sure all required arguments for `new Matador` are included in this example.
 
 ```ts
-const event = new UserLoggedIn({ userId: '12345' })
-await matador.dispatch(event, { metadata: { loginMethod: 'email' } })
+await matador.send(UserLoggedIn, { data: { userId: '123' }, metadata: { loginMethod: 'email' } })
 ```
 
-# CLI
+> TODO: Check this example syntax is correct.
 
-Matador provides a `cli` utility for quick local testing of your Matador config.
+# Concepts
 
-```bash
-bun cli <config-file> <event-file>
+### `MatadorEvent`
+
+A definition of an event. You extend `MatadorEvent` in order to create the _template_ for your event.
+
+### `Subscriber`
+
+A subscriber defines the logic that will execute when an event is consumed.
+It also defines details about the event that are used to _fanout_ the event.
+
+```ts
+/**
+ * Standard subscriber definition with standard callback.
+ */
+export interface StandardSubscriber<T extends MatadorEvent> {
+  /** Human-readable name for the subscriber */
+  readonly name: string;
+
+  /** A description of what the event does. */
+  readonly description: string
+
+  /** Idempotency declaration for retry handling (non-resumable) */
+  readonly idempotent?: 'yes' | 'no' | 'unknown' | undefined;
+
+  /** Route this subscriber's events to a specific queue */
+  readonly targetQueue?: string | undefined;
+
+  /** Importance level for monitoring and alerting */
+  readonly importance?: Importance | undefined;
+
+  /** Feature flag function to conditionally enable/disable the subscriber */
+  readonly enabled?: (() => boolean | Promise<boolean>) | undefined;
+
+  /** Callback function to execute when event is received */
+  readonly callback: StandardCallback<T['data']>;
+}
 ```
 
-Options:
-- `--help, -h`    Show help message
-- `--dry-run`     Validate config and event without dispatching
-- `--timeout`     Timeout in milliseconds for processing (default: 5000)
-- `--verbose`     Show verbose output including all hook logs
+If you want to reference a subscriber which is defined in another codebase, you can use `SubscriberStub`:
 
-Example:
-```bash
-bun cli ./examples/config.ts ./examples/event.ts --verbose
+```ts
+/**
+ * Subscriber stub for multi-codebase scenarios where subscriber implementation
+ * is in a remote service. Declares the subscriber contract without providing
+ * the callback.
+ */
+export interface SubscriberStub extends StandardSubscriberOptions {
+  /** Human-readable name for the subscriber */
+  readonly name: string;
+
+  /** Indicates this is a stub without implementation */
+  readonly isStub: true;
+}
 ```
 
-# Reasoning
+### `Schema`
 
-Given **Matador** is opinionated, we should explain why each choice was made.
+Defines the mapping of `Events` to `Subscribers`.
+```ts
+const myMatadorSchema = MatadorSchema = {
+  // user.logged-in -> UserLoggedInEvent (class) -> subscribers
+  [UserLoggedInEvent.key]: [UserLoggedInEvent, bind([ detectLoginFraud, logEventToBigQuery ])]
+}
+```
 
-### Sending one event to Matador will result in a unique event message will be sent for each subscriber (fanout).
+### `Envelope`
 
-There are basically two models that are viable for implementing an event system:
+Combines both your event data + metadata with a `Docket`.
+Subscribers receive an `EnvelopeOf<MyEvent>`, which is an envelope with a `data` and `metadata` field typed according to your `MatadorEvent` subclass.
 
-- Messages: Each event is a unique message with a 1:1 relationship to its consumer.
-- Topics: Events are 1:N, and all consumers will be notified about the update.
+```ts
+/**
+ * Message envelope containing the event data and routing/observability metadata.
+ * This is the transport-agnostic message format used throughout Matador.
+ */
+export interface Envelope<T = unknown> {
+  /** Unique message ID (UUID v4) */
+  readonly id: string;
 
-We've chosen '_Messages_', for the following reasons:
+  /** The event data */
+  readonly data: T;
 
-- Messages are easier to reason about, there is one message that exists per operation, and successful consumption of that message ends the lifetime of that message.
-- Individual messages can be retried, marked as undeliverable, re-driven to other queues, without affecting other subscribers.
-- The developers implementing events with Messages have less to think about versus using Topics.
+  /** Routing, processing state, and observability metadata */
+  readonly docket: Docket;
+}
 
-Because our Messages always map to a subscriber Action, our usage of '_Messages_' is a lot closer to a 'Command' pattern.
+/**
+ * Helper type to get the envelope type for a subscriber callback.
+ * Extracts the data type from a MatadorEvent and wraps it in an Envelope.
+ *
+ * @example
+ * async callback(envelope: EnvelopeOf<MyEvent>) {
+ *   console.log(envelope.data.someField); // Type-safe access
+ * }
+ */
+export type EnvelopeOf<T extends MatadorEvent> = Envelope<T['data']>;
+```
 
-One of the main disadvantages of using this pattern is that the dispatcher has to know about all subscribers.
-We try to alleviate this by including useful constructs for managing this (e.g. `SubscriberStub`)
+### `Docket`
 
-### The topology of the queues used by Matador is of a specific design, managed by Matador itself.
+> A docket is a commercial document accompanying shipped goods, detailing its contents.
 
-In order to abstract away a lot of the complexity, and to provide entirely out-of-the-box retry and undeliverability features,
-we take ownership over the creation and management of the queues in your chosen backend.
+Contains all metadata about an `Envelope`.
 
-This means that we will create the queue system as we see fit, exposing an abstracted configuration to you for creating the queues you need.
+| Property            | Documentation                                                                                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Routing**         |                                                                                                                                                                                                                                                        |
+| `eventKey`          | Event key for routing                                                                                                                                                                                                                                  |
+| `eventDescription`  | Human-readable description of the event (for observability/logging)                                                                                                                                                                                    |
+| `targetSubscriber`  | Target subscriber name for 1:1 routing                                                                                                                                                                                                                 |
+| `originalQueue`     | Original queue before any dead-letter routing                                                                                                                                                                                                          |
+| `scheduledFor`      | Scheduled processing time for delayed messages (ISO 8601 string)                                                                                                                                                                                       |
+| **Processing State**|                                                                                                                                                                                                                                                        |
+| `attempts`          | Attempt counter managed by Matador (1-based). Incremented on each retry. Used when transport doesn't track attempts.                                                                                                                                   |
+| `createdAt`         | When the envelope was first created (ISO 8601 string)                                                                                                                                                                                                  |
+| `firstError`        | Error message from first failure (for debugging)                                                                                                                                                                                                       |
+| `lastError`         | Error message from most recent failure                                                                                                                                                                                                                 |
+| **Observability**   |                                                                                                                                                                                                                                                        |
+| `importance`        | Importance level for monitoring                                                                                                                                                                                                                        |
+| `correlationId`     | Correlation ID for request tracing                                                                                                                                                                                                                     |
+| `metadata`          | Custom metadata provided by the application, includes `universalMetadata` |
 
-### You are working in a monorepo.
+### `Fanout`
 
-The biggest assumption Matador makes is that you are working in a coding environment where it is easy to share code between packages.
-If you are working in a multi-repo organization, Matador will almost certainly be painful to work with and you should choose something else.
+The practice of taking a single published event and creating `N` concrete events, where `N` is the number of subscribers mapped to that event in your `MatadorSchema`
 
-The way this is reflected is that it is required to share `Event` and `Subscriber` types between dispatcher and consumer.
+### `Transport`
 
-### Most of your usage is simply moving intensive work away from your API servers.
+A representation of a message broker or event backend. e.g `RabbitMQ`, `BullMQ`, `Temporal`, etc.
+Currently, only `RabbitMQ` is supported.
 
-Matador was created to provide a quick and easy way for developers to say 'I want this code to run somewhere else', without thinking about it too much.
-It's still entirely possible to use it as a basis for a sophisticated event system, but the use-case it shines within is as follows:
+### `Topology`
 
-- You have API servers running code.
-- You have worker servers running the same codebase.
-- You want API servers to ask worker servers to run code, using a distributed event system.
+The structure of queues, exchanges, topics, etc that **Matador** will create and manage.
+For RabbitMQ, for example, the topology refers to the exchanges, queues, and bindings of those entities.
+**Matador** creates and manages topology for you.
 
-If you are mostly using a microservice architecture, you may find that Matador requires too much boilerplate to use across microservices.
+There is a generic `Topology` definition in Matador, which you can use to describe the queues you want in a limited fashion.
 
-# Topology
+Each `Transport` then translates that generic `Topology` into the concrete queues, exchanges, etc.
+
+The topology that **Matador** creates looks like this by default.
 
 ![image](./assets/matador-rabbitmq-configuration-simple.drawio.png)
 
-# API
-## Transport
+#### Retry Queue
 
-A Transport in **Matador** is an interface for a given backend, e.g. `memory` or `rabbitmq`.
+When events fail, they are pushed into the retry queue. They will then be re-delivered after their TTL expires.
 
-A Transport is responsible for:
- - Translating a `Topology` into native queue infrastructue.
- - All I/O between the broker.
+#### Unhandled Queue
 
-It wraps all of the transport specific logic for hooking up a broker (e.g RabbitMQ).
+In **Matador**, _unhandled_ refers to a message that was consumed by a worker but is not in your `MatadorSchema`.
+This can happen during deployments, where your publisher has already been deployed, but your consumer has not, and therefore your consumer doesn't know about the event yet.
+Since the most common reason for this (99.99% of the time in our experience) is simply deployment timing, _unhandled_ events will be requeued after a TTL. 
 
-## Schema
+> TODO: Specify the TTL.
 
-A Schema maps events to subscribers using the following syntax.
+#### Undeliverable Queue
 
-```
-[EventKey]: [EventClass, SubscriberList]
-```
+Undeliverable is a conventional term for messages that could not be successfully processed.
+After a configured amount of retries, a message will be sent to the undeliverable queue and left there for inspection.
+By default, this queue is not cleared by **Matador**, although there is a default size limit.
+
+> TODO: Specify the default size limit.
+
+### `Codec`
+
+Handles the _encoding_ and _decoding_ of events that are published and consumed.
+By default, `JSONCodec` is used, which serializes and de-serializes events using JSON.
+
+You can create other `Codec`s if you wish (for example a `MessagePackCodec`).
+
+When using `RabbitMQ`, `RabbitMQCodec` is used, which still uses `JSONCodec` internally, but uses AMQP headers to store `Docket` information.
+
+### `Config`
+
+> TODO: List all config options and description of each.
+
+### `Hooks`
+
+> TODO: List all hooks and description of each.
+
+### `idempotent`
+
+> In programming, an idempotent operation is one that can be performed multiple times with the same result as if it were done only once.
+
+In **Matador**, `idempotent` has a very close meaning, but ultimately just means that an event is _allowed_ to be retried automatically by **Matador**.
+
+# Why it works this way
+
+Since **Matador** is opinionated, we should explain the rationale behind our choices.
+
+### Sending one message will result in a unique message _per subscriber_.
+
+When you send an event in **Matador**, there is a unique copy of that event sent with different `Docket` details.
+
+This is automatic, and referred to as _fanout_ within **Matador**.
+
+We chose this model because while it results in `N` real events per published event, it allows each real event to be retried and managed individually. A single failed subscriber does not affect any others or result in any additional cognitive complexity about the system.
+
+This however does have the impact of requiring the publisher to know about the subscriber. 
+This is easy in a monorepo environment, but for remote subscribers, you can use `SubscriberStub`.
+
+### You are working in a monorepo
+
+While it is possible to use **Matador** outside of a monorepo environment, it is designed to work in a situation where you can easily share code between your applications.
+This is because both the _publisher_ and the _consumer_ need to know about the event _schema_ (e.g. which events map to which subscribers).
+
+You can either share the code for your `MatadorSchema`, or you can make your workers simply be different instances of the same codebase (with different configuration).
+
+> TODO: Include example of Matador config that is dynamic (e.g. from marketing-pf)
+
+### You want `at-least-once` delivery.
+
+There are two options for delivery in an event system.
+
+- `at-least-once`: Every message is guaranteed to be delivered once, but may deliver more times in some edge-cases.
+- `at-most-once`: Every message is guaranteed to be delivered at most once, but may not be delivered at all in some edge cases.
+
+Any system that promises `exactly-once` is lying to you, because there are always timeout scenarios in a distributed system that mean that there may still be a very small possibility of a message being either delivered multiple times (`at-least-once`) or not at all (`at-most-once`).
+
+The choice essential comes down to when you `ack` a message.
+
+- Before processing: `at-most-once`.
+- After processing: `at least-once`.
+
+> TODO: Are these statements correct?
+
+# Logging
+
+> TODO: List all possible logs emitted by Matador.
+
+# Errors
+
+> TODO: List all possible errors emitted by Matador (and description of each)
+
+# Other features
+
+### `universalMetadata`
+
+It is often the case that you want every event to have a consistent set of metadata.
+**Matador** provides a hook `loadUniversalMetadata` which you can use to do this.
+
+You can combine this with `asyncLocalStorage` to set session based metadata on your events.
+
+Here is a real world example:
 
 ```ts
-const myMatadorSchema: MatadorSchema = {
-  [UserLoggedIn.key]: [UserLoggedIn, [detectLoginFraud, logEventToBigQuery]]
-}
-```
-
-`EventKey` is a unique name representing an event.
-It should always be set by referencing the static `key` property of your event.
-
-`EventClass` is the class type of your event.
-It is used by **Matador** to know what type of event to construct when it receives a payload.
-
-`SubscriberList` is an ordered list of subscribers that should be called for each event.
-
-You can also register subscribers after the schema has been created.
-
-```ts
-// This is useful for 'aspect-oriented-programming',
-// or when you need to setup Matador in different lifecycle stages.
-class AuditLogger {
-  start() {
-    this.matador.register(UserLoggedIn,  [this.auditSubscriber])
-    this.matador.register(UserLoggedOut, [this.auditSubscriber])
+loadUniversalMetadata: () => {
+  const store = asyncLocalStorage?.getStore()
+  return {
+    timestamp: new Date(),
+    correlationId: store?.correlationId || null,
+    userId: store?.userId || null,
   }
-}
+},
 ```
 
-## Events
+### Schema plugins
 
-There are a few ways you will interact with events in **Matador**.
-
-- Subclassing `MatadorEvent` to create your own events.
-- Handling events in a `Subscriber`.
-- Dispatching events with `dispatch`.
-
-### Envelopes
-
-While you subclass **MatadorEvent** to define a new event, **Matador** wraps these events in _Envelopes_ when they are dispatched. Envelopes contain additional properties like `metadata`, routing information in the `docket`, and attempt tracking.
-
-Your Subscriber callbacks receive the event `data` and the `Docket` (routing metadata).
-
-### 'Fanning out'
-
-When you dispatch an event to Matador, it creates a unique envelope for each subscriber defined in the schema for this event.
-
-This means that all events have a 1-1 relationship with subscribers, even if there are multiple subscibers.
-
-### Metadata
-
-Metadata is passed via `EventOptions` when dispatching events.
-
-This field should contain any information **not** required for an event to be processed, but that is useful for logging, debugging, monitoring, etc.
-
-Separating the metadata from the data in this way is meant to make it clear which properties are necessary for operation and which you can be more lax with.
-
-**Matador** also has the concept of _UniversalMetadata_, which are universal to all your events, for purposes like correlation IDs or session contexts. These are loaded via the `loadUniversalMetadata` hook.
-
-### `dispatch`
-
-Create event instances and dispatch them:
+Sometimes, you want to run a subscriber on every event in your _schema_.
+Instead of defining the subscriber mapping for every event, you can use _schema plugins_ to do this:
 
 ```ts
-const event = new UserLoggedIn({ userId: '12345' })
-await matador.dispatch(event, { metadata: { source: 'web' } })
-
-// With 'before' for change events
-const updateEvent = new UserUpdated({ name: 'New Name' }, { name: 'Old Name' })
-await matador.dispatch(updateEvent)
+const myMatadorSchema = MatadorSchema = installPlugins({
+  [UserLoggedInEvent.key]: [UserLoggedInEvent, bind([ detectLoginFraud ])],
+  [UserLoggedOutEvent.key]: [UserLoggedOutEvent, bind([])],
+  [ChatMessageSent.key]: [ChatMessageSent, bind([ notifyUser ])]
+},
+  [
+    {
+      subscriber: uploadEventToBigQuery,
+      exclusions: [
+        ChatMessageSent.key,
+      ],
+    },
+  ])
 ```
 
-### Delayed Message Processing
+> TODO: Ensure this is actually possible in Matador V2 and add the functionality if not.
 
-```typescript
-// Delay by 5 minutes
-const event = new SendReminderEvent({ userId: '123', meetingId: '456' })
-await matador.dispatch(event, { delayMs: 300000 })
-```
+### `DoRetry` & `DontRetry`
 
+Sometimes, your subscribers may want to explicitly control if they should be retried or not.
+This is useful in cases where a message is _sometimes_ idempotent, but in certain cases (e.g. error scenarios) it is not.
 
-#### How It Works
+> TODO: Add an example here.
 
-1. **RabbitMQ**: Uses `rabbitmq_delayed_message_exchange` plugin. Enable via `enableDelayedMessages` in transport config.
-2. **Local**: Uses `setTimeout` for testing/development
-3. **Auto-detection**: Matador detects plugin availability at startup
+### `LocalTransport`
 
-#### Plugin Installation (RabbitMQ)
+Matador includes a `LocalTransport`, which is an in-memory transport that will simply process events on the same machine.
+This allows you to develop locally without having a message broker, then simply switch to using an actual message broker when you deploy.
 
-To use delayed messages, you need to install the `rabbitmq_delayed_message_exchange` plugin.
+### `MultiTransport`
 
-If the plugin is not installed, Matador will log a warning for any delayed messages, and process them immediately instead.
+`MultiTransport` allows you to declare a group of transports, and then switch between them at runtime.
+
+You can also use configure it with `fallbackEnabled` (default: `true`), and if enqueuing a message fails, it can fallback to another queue system (in declared order).
+
+You can combine this with `LocalTransport` to make messages that fail to enqueue execute locally, providing resilience against your message broker being unavailable or timing out.
+
+> TODO: Add example with RabbitMQTransport + LocalTransport
+
+### `enabled()` hook for `Subscriber`
+
+Sometimes, you want to enable / disable subscribers at runtime using feature flags.
+
+Each subscriber accepts and `enabled()` callback, which will be invoked before publishing or consuming an event.
+
+> TODO: Is this true? or does it only disable publishing?
+> TODO: Add examples
+
+### `importance`
+
+`importance` is an optional field that allows you to note how critical a subscriber failure is.
+This is useful for setting up alerts in your observability platform.
+
+For example, if an analytics event fails, it is likely unimportant, but if a payment related subscriber fails, it warrants investigation and should trigger an alert.
+
+> TODO: Add example.
+
+### Delayed messages
+
+> Delayed messages implementation is dependent on the `Transport` used.
+
+You can optionally delay messages in Matador. This will cause their delivery to be delayed.
+
+When using `RabbitMQTransport`, this is implemented using the [delayed-message-exchange plugin](https://github.com/rabbitmq/rabbitmq-delayed-message-exchange), and you should ensure it is installed in your RabbitMQ instance first.
+
+> Note: Distributed event systems do not have precise delivery timings. The consumption of your event will be dependent on your throughput, and you should not depend on delayed messages for accurate timings.
+
+> TODO: Add example.
+
+# CLI
+
+> TODO: Verify this is the right command.
+
+Matador provides a `cli` utility for quick local testing of your Matador configuration.
 
 ```bash
-rabbitmq-plugins enable rabbitmq_delayed_message_exchange
-rabbitmq-server restart
+bunx matador cli <path-to-config-file> <path-to-event-file>
 ```
 
-Then configure your RabbitMQ transport:
-```ts
-const transport = createRabbitMQTransport({
-  url: 'amqp://localhost:5672',
-  enableDelayedMessages: true,
-})
+You can send a quick test event using.
+
+```bash
+bunx matador cli send-test-event
 ```
-
-## Subscribers
-
-Subscribers in Matador listen for events and execute callbacks when those events are received.
-
-There are two types of subscribers:
-- `Subscriber`: A full subscriber that processes events
-- `SubscriberStub`: A stub subscriber used for declaring subscribers that will be implemented elsewhere
-
-### Idempotency
-
-The `idempotent` property can be set to:
-- `'yes'`: Operation can be repeated safely.
-- `'no'`: Operation should not be repeated.
-- `'unknown'`: Operation idempotency is unknown (same as `no`, useful for migrating old code).
-
-This is used by Matador to determine retry behavior.
-
-### Subscriber Stubs
-
-Subscriber stubs are used when you need to declare a subscriber in one service but implement it in another.
-
-For example, your application will dispatch an event, but it will be consumed in another codebase (maybe not even TypeScript).
-
-They only require the common properties and the `isStub: true` flag.
-
-Example:
-```ts
-const myStubSubscriber: SubscriberStub = {
-  isStub: true,
-  name: 'my-subscriber',
-  targetQueue: 'general'
-}
-```
-
-### `enabled`
-
-You can provide an `async` function that, if set, will be used to determine if events for that subscriber should be dispatched.
-It does **not** disable consumption, only dispatch, any existing events will still be received.
-
-You can use this to feature flag a given subscribers events.
-
-```ts
-{
-  isStub: true,
-  name: 'send-emails-v2',
-  targetQueue: 'email-service-v2',
-  importance: 'must-investigate',
-  enabled: () =>
-    FeatureFlags.getBoolValue('email-service-v2.enabled'),
-}
-```
-
-## Config
-
-| Property         | Description                                                        | Required | Default         |
-|------------------|--------------------------------------------------------------------|----------|-----------------|
-| `transport`      | Transport for message delivery (e.g. `LocalTransport`, `RabbitMQTransport`) | ✅       |                 |
-| `topology`       | Topology configuration (namespace, queues, dead-letter, retry)     | ✅       |                 |
-| `consumeFrom`    | Queues this instance should consume from (empty = no consumption)  |          | `[]`            |
-| `hooks`          | Custom lifecycle hooks                                             |          | `undefined`     |
-| `codec`          | Message codec for serialization                                    |          | `JsonCodec`     |
-| `retryPolicy`    | Custom retry policy                                                |          | `StandardRetryPolicy` |
-| `shutdownConfig` | Shutdown configuration (timeouts)                                  |          | See defaults    |
-
-### RabbitMQ Transport Config
-
-| Property                | Description                                                        | Required | Default                   |
-|-------------------------|--------------------------------------------------------------------|----------|---------------------------|
-| `url`                   | Connection URL (e.g. `amqp://localhost:5672`)                      | ✅       |                           |
-| `quorumQueues`          | Use quorum queues                                                  |          | `true`                    |
-| `defaultPrefetch`       | Default prefetch count                                             |          | `10`                      |
-| `enableDelayedMessages` | Enable delayed message exchange plugin                             |          | `true`                    |
-| `logger`                | Custom logger                                                      |          | `undefined`               |
-
-### Topology Configuration
-
-Topology is configured using the `TopologyBuilder`:
-
-```ts
-const topology = createTopology()
-  .withNamespace('my-app')              // Prefix for all queue names
-  .addQueue('general')                   // Add a queue
-  .addQueue('heavy-jobs', {              // Queue with options
-    concurrency: 5,
-    consumerTimeout: 60000,
-  })
-  .withRetry({                           // Configure retry behavior
-    enabled: true,
-    defaultDelayMs: 1000,
-    maxDelayMs: 300000,
-  })
-  .withDeadLetter({                      // Configure dead-letter queues
-    unhandled: { enabled: true },
-    undeliverable: { enabled: true, maxLength: 10000 },
-  })
-  .build()
-```
-
-#### Queue Options
-
-| Property          | Description                                              |
-|-------------------|----------------------------------------------------------|
-| `concurrency`     | Concurrency for this queue                               |
-| `consumerTimeout` | Consumer timeout in milliseconds                         |
-| `priorities`      | Enable priority support if transport allows              |
-| `exact`           | Use queue name exactly without namespace prefix          |
-
-The `exact` option is useful when referencing external queues not managed by Matador.
-
-## Hooks
-
-**Hooks** allow you to customize the behaviour of Matador while it is running.
-
-It is intended to allow you to plug into a feature flag system like LaunchDarkly.
-
-You can also use hooks to respond to various lifecycle events (like when events are enqueued, processed, or fail).
-
-The lifecycle methods are very useful for unit testing! You can spy on any of them in order to wait until things happen.
-They are also where you should integrate your observability platform.
-
-```ts
-const myHooks: MatadorHooks = {
-  // Logger instance to use for logging
-  logger: {
-    debug: (message: string, ...args: unknown[]) => { },
-    info: (message: string, ...args: unknown[]) => { },
-    warn: (message: string, ...args: unknown[]) => { },
-    error: (message: string, ...args: unknown[]) => { }
-  },
-  // Called when a new event is successfully enqueued
-  onEnqueueSuccess: async (context) => {},
-  // Called when enqueue falls back to a secondary queue
-  onEnqueueWarning: async (context) => {},
-  // Called when transport fallback occurs (FallbackTransport only)
-  onTransportFallback: async (context) => {},
-  // Called when a new event failed to enqueue
-  onEnqueueError: async (context) => {},
-  // Allows you to wrap the processing function (for APM context)
-  onWorkerWrap: async (envelope, subscriber, execute) => await execute(),
-  // Called before a worker processes a message
-  onWorkerBeforeProcess: async (envelope, subscriber) => {},
-  // Called when a new event was successfully processed
-  onWorkerSuccess: async (context) => {},
-  // Called when a new event failed to be processed
-  onWorkerError: async (context) => {},
-  // Called when message decoding fails
-  onDecodeError: async (context) => {},
-  // Called when transport connection state changes
-  onConnectionStateChange: async (state) => {},
-  // Called everytime an event is created, and applies the result to the envelope
-  loadUniversalMetadata: () => ({ correlationId: '...' }),
-  // Dynamic queue concurrency lookup
-  getQueueConcurrency: (queueName) => undefined,
-  // Dynamic retry delay lookup
-  getRetryDelay: (envelope, attemptNumber) => undefined,
-  // Dynamic max attempts lookup
-  getAttempts: (envelope) => undefined,
-  // Dynamic max deliveries (poison threshold) lookup
-  getMaxDeliveries: (envelope) => undefined
-}
-```
-
-## Logging
-
-All **Matador** logs have the prefix `[Matador]`.
-
-Matador emits the following logs:
-
-- 🔵: `[Matador] 🔌 Delayed message exchange plugin detected`
-
-- 🟡: `[Matador] 🟡 RabbitMQ delayed message exchange plugin not available...`
-- 🟡: `[Matador] 🟡 Hook {hookName} threw an error`
-- 🟡: `[Matador] ⚠️ Shutdown timeout reached with {n} events still processing`
-
-- 🔴: `[Matador] 🔴 Failed to enqueue delayed message`
-- 🔴: `[Matador] 🔴 Handler error in message processing`
-- 🔴: `[Matador] 🔴 RabbitMQ connection error`
-- 🔴: `[Matador] 🔴 RabbitMQ publish channel error`
-
-Errors are thrown in the following scenarios:
-
-- 🔴 `TransportClosedError`: If trying to enqueue events after transport has been closed/shutdown.
-- 🔴 `DoRetry`: Thrown manually by subscribers to force retry of an event regardless of idempotency.
-- 🔴 `DontRetry`: Thrown manually by subscribers to prevent retry of an event regardless of idempotency.
-- 🔴 `EventAssertionError`: Thrown when an event fails user-defined assertions.
-- 🔴 `EventNotRegisteredError`: If an event key is not found in the schema.
-- 🔴 `InvalidEventError`: If an event is missing required data or is malformed.
-- 🔴 `InvalidSchemaError`: If the schema validation fails.
-- 🔴 `LocalTransportCannotProcessStubError`: If local transport receives event for stub subscriber.
-- 🔴 `MessageMaybePoisonedError`: If a message has been redelivered too many times.
-- 🔴 `IdempotentMessageCannotRetryError`: If a non-idempotent message is retried after a previous delivery.
-- 🔴 `NoSubscribersExistError`: If trying to fanout an event with no subscribers.
-- 🔴 `NotStartedError`: If trying to use Matador before calling start().
-- 🔴 `ShutdownInProgressError`: If trying to dispatch during shutdown.
-- 🔴 `QueueNotFoundError`: If trying to enqueue to a queue that doesn't exist.
-- 🔴 `SubscriberIsStubError`: If trying to process event for stub subscriber.
-- 🔴 `SubscriberNotRegisteredError`: If subscriber not found for event.
-- 🔴 `TimeoutError`: If an operation like publish times out.
-- 🔴 `TransportNotConnectedError`: If transport is not connected.
-- 🔴 `TransportSendError`: If transport fails to send a message.
-- 🔴 `AllTransportsFailedError`: If all transports in a fallback chain fail.
-- 🔴 `DelayedMessagesNotSupportedError`: If delayed messages plugin is not available.
-
-Check [`packages/matador/src/errors/`](packages/matador/src/errors/) for detailed descriptions of each error and how to action them.
-
-# RabbitMQ
-
-While documenting RabbitMQ is out of scope for this document, we get asked some questions repeatedly, so choose to document some limitations about RabbitMQ here.
-
-### You can't peek messages in RabbitMQ.
-
-To peek a message in RabbitMQ, you have to unqueue it. You can immediately requeue it, but you will put it at the back of the queue.
-
-### You can't filter messages in RabbitMQ.
-
-Consumers always receive the next message at the head of the queue.
-If you only want certain messages to be received by certain consumers, you should create a new queue.
-
-A common pattern is that each microservice owns its own queue.
-
-# Further Documentation
-
-Matador has complete JSDoc coverage, if this document doesn't answer your question, check the source code.
