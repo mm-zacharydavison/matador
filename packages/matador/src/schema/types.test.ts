@@ -36,10 +36,11 @@ class ChatMessageSentEvent extends MatadorEvent {
 
 describe('bind', () => {
   it('should create a schema entry tuple', () => {
-    const subscriber = createSubscriber<UserCreatedEvent>(
-      'test-sub',
-      async () => {},
-    );
+    const subscriber = createSubscriber<UserCreatedEvent>({
+      name: 'test-sub',
+      description: 'Test subscriber',
+      callback: async () => {},
+    });
     const entry = bind(UserCreatedEvent, [subscriber]);
 
     expect(isSchemaEntryTuple(entry)).toBe(true);
@@ -63,18 +64,21 @@ describe('isSchemaEntryTuple', () => {
 
 describe('installPlugins', () => {
   it('should add plugin subscriber to all events', () => {
-    const sub1 = createSubscriber<UserCreatedEvent>(
-      'user-handler',
-      async () => {},
-    );
-    const sub2 = createSubscriber<OrderPlacedEvent>(
-      'order-handler',
-      async () => {},
-    );
-    const globalSub = createSubscriber<MatadorEvent>(
-      'analytics',
-      async () => {},
-    );
+    const sub1 = createSubscriber<UserCreatedEvent>({
+      name: 'user-handler',
+      description: 'Handles user events',
+      callback: async () => {},
+    });
+    const sub2 = createSubscriber<OrderPlacedEvent>({
+      name: 'order-handler',
+      description: 'Handles order events',
+      callback: async () => {},
+    });
+    const globalSub = createSubscriber<MatadorEvent>({
+      name: 'analytics',
+      description: 'Analytics subscriber',
+      callback: async () => {},
+    });
 
     const baseSchema: MatadorSchema = {
       [UserCreatedEvent.key]: [UserCreatedEvent, [sub1]],
@@ -100,22 +104,26 @@ describe('installPlugins', () => {
   });
 
   it('should respect exclusions', () => {
-    const sub1 = createSubscriber<UserCreatedEvent>(
-      'user-handler',
-      async () => {},
-    );
-    const sub2 = createSubscriber<OrderPlacedEvent>(
-      'order-handler',
-      async () => {},
-    );
-    const sub3 = createSubscriber<ChatMessageSentEvent>(
-      'chat-handler',
-      async () => {},
-    );
-    const globalSub = createSubscriber<MatadorEvent>(
-      'analytics',
-      async () => {},
-    );
+    const sub1 = createSubscriber<UserCreatedEvent>({
+      name: 'user-handler',
+      description: 'Handles user events',
+      callback: async () => {},
+    });
+    const sub2 = createSubscriber<OrderPlacedEvent>({
+      name: 'order-handler',
+      description: 'Handles order events',
+      callback: async () => {},
+    });
+    const sub3 = createSubscriber<ChatMessageSentEvent>({
+      name: 'chat-handler',
+      description: 'Handles chat events',
+      callback: async () => {},
+    });
+    const globalSub = createSubscriber<MatadorEvent>({
+      name: 'analytics',
+      description: 'Analytics subscriber',
+      callback: async () => {},
+    });
 
     const baseSchema: MatadorSchema = {
       [UserCreatedEvent.key]: [UserCreatedEvent, [sub1]],
@@ -148,18 +156,21 @@ describe('installPlugins', () => {
   });
 
   it('should handle multiple plugins', () => {
-    const sub1 = createSubscriber<UserCreatedEvent>(
-      'user-handler',
-      async () => {},
-    );
-    const analyticsSub = createSubscriber<MatadorEvent>(
-      'analytics',
-      async () => {},
-    );
-    const loggingSub = createSubscriber<MatadorEvent>(
-      'logging',
-      async () => {},
-    );
+    const sub1 = createSubscriber<UserCreatedEvent>({
+      name: 'user-handler',
+      description: 'Handles user events',
+      callback: async () => {},
+    });
+    const analyticsSub = createSubscriber<MatadorEvent>({
+      name: 'analytics',
+      description: 'Analytics subscriber',
+      callback: async () => {},
+    });
+    const loggingSub = createSubscriber<MatadorEvent>({
+      name: 'logging',
+      description: 'Logging subscriber',
+      callback: async () => {},
+    });
 
     const baseSchema: MatadorSchema = {
       [UserCreatedEvent.key]: [UserCreatedEvent, [sub1]],
@@ -179,14 +190,16 @@ describe('installPlugins', () => {
   });
 
   it('should handle object format schema entries', () => {
-    const sub1 = createSubscriber<UserCreatedEvent>(
-      'user-handler',
-      async () => {},
-    );
-    const globalSub = createSubscriber<MatadorEvent>(
-      'analytics',
-      async () => {},
-    );
+    const sub1 = createSubscriber<UserCreatedEvent>({
+      name: 'user-handler',
+      description: 'Handles user events',
+      callback: async () => {},
+    });
+    const globalSub = createSubscriber<MatadorEvent>({
+      name: 'analytics',
+      description: 'Analytics subscriber',
+      callback: async () => {},
+    });
 
     const baseSchema: MatadorSchema = {
       [UserCreatedEvent.key]: {
@@ -205,11 +218,14 @@ describe('installPlugins', () => {
   });
 
   it('should work with subscriber stubs', () => {
-    const sub1 = createSubscriber<UserCreatedEvent>(
-      'user-handler',
-      async () => {},
-    );
-    const stubSub = createSubscriberStub('remote-analytics', {
+    const sub1 = createSubscriber<UserCreatedEvent>({
+      name: 'user-handler',
+      description: 'Handles user events',
+      callback: async () => {},
+    });
+    const stubSub = createSubscriberStub({
+      name: 'remote-analytics',
+      description: 'Remote analytics stub',
       targetQueue: 'analytics-worker',
     });
 
@@ -228,7 +244,11 @@ describe('installPlugins', () => {
   it('should return empty schema for empty input', () => {
     const schema = installPlugins({}, [
       {
-        subscriber: createSubscriber<MatadorEvent>('analytics', async () => {}),
+        subscriber: createSubscriber<MatadorEvent>({
+          name: 'analytics',
+          description: 'Analytics subscriber',
+          callback: async () => {},
+        }),
       },
     ]);
 
@@ -236,14 +256,16 @@ describe('installPlugins', () => {
   });
 
   it('should not modify original schema', () => {
-    const sub1 = createSubscriber<UserCreatedEvent>(
-      'user-handler',
-      async () => {},
-    );
-    const globalSub = createSubscriber<MatadorEvent>(
-      'analytics',
-      async () => {},
-    );
+    const sub1 = createSubscriber<UserCreatedEvent>({
+      name: 'user-handler',
+      description: 'Handles user events',
+      callback: async () => {},
+    });
+    const globalSub = createSubscriber<MatadorEvent>({
+      name: 'analytics',
+      description: 'Analytics subscriber',
+      callback: async () => {},
+    });
 
     const baseSchema: MatadorSchema = {
       [UserCreatedEvent.key]: [UserCreatedEvent, [sub1]],

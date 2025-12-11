@@ -448,7 +448,7 @@ When using `idempotent: 'resumable'`, you can use the `io` function argument to 
 On subsequent retries, those successful `io` calls will return the cached value, instead of executing again.
 
 ```ts
-import { MemoryCheckpointStore } from '@meetsmore/matador';
+import { MemoryCheckpointStore } from '@zdavison/matador';
 
 // Configure Matador with a checkpoint store
 const matador = new Matador({
@@ -563,6 +563,16 @@ const matador = new Matador(
   }
 );
 ```
+
+### You want a conventional queue topology to be managed for you
+
+Because making queue topology choices can be difficult, we decided to create a reasonable, good-for-most-use-cases design that covers the basic needs.
+
+In our org, we have been using this topology for 2+ years, and it's suited most of our needs. We create new queues, but the 'infrastructure queues' (e.g. dead-letter, retry, etc), we don't need to touch.
+
+So that you can get up and running quickly, **Matador** makes a lot of assumptions about how events should be routed and retried, and you're buying into those conventions by using **Matador**.
+
+If you want precise control over your queue topology, **Matador** may not be suitable for you.
 
 ### You want `at-least-once` delivery.
 
@@ -696,7 +706,7 @@ Sometimes, you want to run a subscriber on every event in your _schema_.
 Instead of defining the subscriber mapping for every event, you can use `installPlugins` to add global subscribers:
 
 ```ts
-import { installPlugins } from '@meetsmore/matador-v2';
+import { installPlugins } from '@zdavison/matador';
 
 const baseSchema: MatadorSchema = {
   [UserCreatedEvent.key]: [UserCreatedEvent, [sendWelcomeEmail]],
@@ -720,7 +730,7 @@ Sometimes, your subscribers may want to explicitly control if they should be ret
 This is useful in cases where a message is _sometimes_ idempotent, but in certain cases (e.g. error scenarios) it is not.
 
 ```ts
-import { DoRetry, DontRetry } from '@meetsmore/matador-v2';
+import { DoRetry, DontRetry } from '@zdavison/matador';
 
 const processPayment: Subscriber<PaymentRequestedEvent> = {
   name: 'process-payment',
@@ -757,7 +767,7 @@ You can also use configure it with `fallbackEnabled` (default: `true`), and if e
 You can combine this with `LocalTransport` to make messages that fail to enqueue execute locally, providing resilience against your message broker being unavailable or timing out.
 
 ```ts
-import { MultiTransport, RabbitMQTransport, LocalTransport } from '@meetsmore/matador-v2';
+import { MultiTransport, RabbitMQTransport, LocalTransport } from '@zdavison/matador';
 
 const rabbitTransport = new RabbitMQTransport({ url: 'amqp://localhost' });
 const localTransport = new LocalTransport();

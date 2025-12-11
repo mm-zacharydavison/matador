@@ -41,6 +41,9 @@ export type SubscriberCallback<T = unknown> = StandardCallback<T>;
  * Base configuration options shared by all subscriber types.
  */
 export interface BaseSubscriberOptions {
+  /** Human-readable description of what this subscriber does */
+  readonly description: string;
+
   /** Route this subscriber's events to a specific queue */
   readonly targetQueue?: string | undefined;
 
@@ -172,6 +175,7 @@ export function isStandardSubscriber(
  */
 export interface CreateStandardSubscriberInput<T extends MatadorEvent> {
   readonly name: string;
+  readonly description: string;
   readonly callback: StandardCallback<T['data']>;
   readonly idempotent?: 'yes' | 'no' | 'unknown' | undefined;
   readonly importance?: Importance | undefined;
@@ -184,6 +188,7 @@ export interface CreateStandardSubscriberInput<T extends MatadorEvent> {
  */
 export interface CreateResumableSubscriberInput<T extends MatadorEvent> {
   readonly name: string;
+  readonly description: string;
   readonly callback: ResumableCallback<T['data']>;
   readonly idempotent: 'resumable';
   readonly importance?: Importance | undefined;
@@ -205,6 +210,7 @@ export type CreateSubscriberInput<T extends MatadorEvent> =
  * ```typescript
  * const subscriber = createSubscriber<MyEvent>({
  *   name: 'my-subscriber',
+ *   description: 'Handles MyEvent by logging the data',
  *   callback: async (envelope) => {
  *     console.log(envelope.data);
  *   },
@@ -215,6 +221,7 @@ export type CreateSubscriberInput<T extends MatadorEvent> =
  * ```typescript
  * const subscriber = createSubscriber<MyEvent>({
  *   name: 'my-resumable-subscriber',
+ *   description: 'Processes MyEvent with checkpoint-based idempotency',
  *   idempotent: 'resumable',
  *   callback: async (envelope, { io }) => {
  *     await io('step-1', () => doSomething());
@@ -224,41 +231,10 @@ export type CreateSubscriberInput<T extends MatadorEvent> =
  */
 export function createSubscriber<T extends MatadorEvent>(
   input: CreateSubscriberInput<T>,
-): Subscriber<T>;
-
-/**
- * @deprecated Use object-based API instead: createSubscriber({ name, callback, ...options })
- */
-export function createSubscriber<T extends MatadorEvent>(
-  name: string,
-  callback: StandardCallback<T['data']>,
-  options?: StandardSubscriberOptions,
-): StandardSubscriber<T>;
-
-export function createSubscriber<T extends MatadorEvent>(
-  inputOrName: CreateSubscriberInput<T> | string,
-  callback?: StandardCallback<T['data']>,
-  options?: StandardSubscriberOptions,
 ): Subscriber<T> {
-  // Legacy API: createSubscriber(name, callback, options)
-  if (typeof inputOrName === 'string') {
-    const opts = options ?? {};
-    return {
-      name: inputOrName,
-      callback: callback!,
-      idempotent: opts.idempotent ?? 'unknown',
-      importance: opts.importance ?? 'should-investigate',
-      ...(opts.targetQueue !== undefined && {
-        targetQueue: opts.targetQueue,
-      }),
-      ...(opts.enabled !== undefined && { enabled: opts.enabled }),
-    } as StandardSubscriber<T>;
-  }
-
-  // New API: createSubscriber({ name, callback, ... })
-  const input = inputOrName;
   const base = {
     name: input.name,
+    description: input.description,
     callback: input.callback,
     importance: input.importance ?? 'should-investigate',
     ...(input.targetQueue !== undefined && {
@@ -283,21 +259,40 @@ export function createSubscriber<T extends MatadorEvent>(
 }
 
 /**
- * Creates a subscriber stub for remote implementations.
+ * Input options for createSubscriberStub.
  */
-export function createSubscriberStub(
-  name: string,
-  options: StandardSubscriberOptions = {},
-): SubscriberStub {
+export interface CreateSubscriberStubInput {
+  readonly name: string;
+  readonly description: string;
+  readonly idempotent?: 'yes' | 'no' | 'unknown' | undefined;
+  readonly importance?: Importance | undefined;
+  readonly targetQueue?: string | undefined;
+  readonly enabled?: (() => boolean | Promise<boolean>) | undefined;
+}
+
+/**
+ * Creates a subscriber stub for remote implementations.
+ *
+ * @example
+ * ```typescript
+ * const stub = createSubscriberStub({
+ *   name: 'remote-analytics',
+ *   description: 'Sends events to remote analytics service',
+ *   targetQueue: 'analytics-worker',
+ * });
+ * ```
+ */
+export function createSubscriberStub(input: CreateSubscriberStubInput): SubscriberStub {
   return {
-    name,
+    name: input.name,
+    description: input.description,
     isStub: true,
-    idempotent: options.idempotent ?? 'unknown',
-    importance: options.importance ?? 'should-investigate',
-    ...(options.targetQueue !== undefined && {
-      targetQueue: options.targetQueue,
+    idempotent: input.idempotent ?? 'unknown',
+    importance: input.importance ?? 'should-investigate',
+    ...(input.targetQueue !== undefined && {
+      targetQueue: input.targetQueue,
     }),
-    ...(options.enabled !== undefined && { enabled: options.enabled }),
+    ...(input.enabled !== undefined && { enabled: input.enabled }),
   };
 }
 
@@ -306,6 +301,7 @@ export function createSubscriberStub(
  */
 export interface SubscriberDefinition {
   readonly name: string;
+  readonly description: string;
   readonly idempotent: Idempotency;
   readonly importance: Importance;
   readonly targetQueue?: string | undefined;

@@ -54,43 +54,51 @@ export class OrderPlacedEvent extends MatadorEvent {
 // Subscribers
 // ============================================================================
 
-const sendWelcomeEmail = createSubscriber(
-  'send-welcome-email',
-  async ({ data, docket }) => {
+const sendWelcomeEmail = createSubscriber({
+  name: 'send-welcome-email',
+  description: 'Sends a welcome email to newly registered users',
+  callback: async ({ data, docket }) => {
     console.log(`  📧 Sending welcome email to ${data.email}`);
     console.log(`     User: ${data.name} (${data.userId})`);
     if (docket.correlationId) {
       console.log(`     Correlation ID: ${docket.correlationId}`);
     }
   },
-  { idempotent: 'yes', importance: 'should-investigate' },
-);
+  idempotent: 'yes',
+  importance: 'should-investigate',
+});
 
-const trackUserAnalytics = createSubscriber(
-  'track-user-analytics',
-  async ({ data }) => {
+const trackUserAnalytics = createSubscriber({
+  name: 'track-user-analytics',
+  description: 'Tracks user creation in analytics system',
+  callback: async ({ data }) => {
     console.log(`  📊 Tracking analytics for new user: ${data.userId}`);
   },
-  { idempotent: 'yes', importance: 'can-ignore' },
-);
+  idempotent: 'yes',
+  importance: 'can-ignore',
+});
 
-const processOrder = createSubscriber(
-  'process-order',
-  async ({ data }) => {
+const processOrder = createSubscriber({
+  name: 'process-order',
+  description: 'Processes order for fulfillment',
+  callback: async ({ data }) => {
     console.log(`  📦 Processing order ${data.orderId}`);
     console.log(`     Amount: $${data.amount.toFixed(2)}`);
     console.log(`     Items: ${data.items.length} item(s)`);
   },
-  { idempotent: 'no', importance: 'must-investigate' },
-);
+  idempotent: 'no',
+  importance: 'must-investigate',
+});
 
-const sendOrderConfirmation = createSubscriber(
-  'send-order-confirmation',
-  async ({ data }) => {
+const sendOrderConfirmation = createSubscriber({
+  name: 'send-order-confirmation',
+  description: 'Sends order confirmation email to customer',
+  callback: async ({ data }) => {
     console.log(`  📧 Sending order confirmation for ${data.orderId}`);
   },
-  { idempotent: 'yes', importance: 'should-investigate' },
-);
+  idempotent: 'yes',
+  importance: 'should-investigate',
+});
 
 // ============================================================================
 // Exports

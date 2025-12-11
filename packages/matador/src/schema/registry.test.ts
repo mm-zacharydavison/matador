@@ -30,7 +30,7 @@ describe('SchemaRegistry', () => {
 
   describe('register', () => {
     it('should register an event with subscribers', () => {
-      const subscriber = createSubscriber('test-subscriber', async () => {});
+      const subscriber = createSubscriber({ name: 'test-subscriber', description: 'Test subscriber', callback: async () => {} });
 
       registry.register(TestEvent, [subscriber]);
 
@@ -39,7 +39,7 @@ describe('SchemaRegistry', () => {
     });
 
     it('should throw when registering duplicate event without override', () => {
-      const subscriber = createSubscriber('test-subscriber', async () => {});
+      const subscriber = createSubscriber({ name: 'test-subscriber', description: 'Test subscriber', callback: async () => {} });
 
       registry.register(TestEvent, [subscriber]);
 
@@ -49,8 +49,8 @@ describe('SchemaRegistry', () => {
     });
 
     it('should allow override when option is set', () => {
-      const subscriber1 = createSubscriber('sub-1', async () => {});
-      const subscriber2 = createSubscriber('sub-2', async () => {});
+      const subscriber1 = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
+      const subscriber2 = createSubscriber({ name: 'sub-2', description: 'Subscriber 2', callback: async () => {} });
 
       registry.register(TestEvent, [subscriber1]);
       registry.register(TestEvent, [subscriber2], { override: true });
@@ -61,7 +61,7 @@ describe('SchemaRegistry', () => {
     });
 
     it('should register aliases', () => {
-      const subscriber = createSubscriber('test-subscriber', async () => {});
+      const subscriber = createSubscriber({ name: 'test-subscriber', description: 'Test subscriber', callback: async () => {} });
 
       registry.register(AliasedEvent, [subscriber]);
 
@@ -81,8 +81,8 @@ describe('SchemaRegistry', () => {
         }
       }
 
-      const sub1 = createSubscriber('sub-1', async () => {});
-      const sub2 = createSubscriber('sub-2', async () => {});
+      const sub1 = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
+      const sub2 = createSubscriber({ name: 'sub-2', description: 'Subscriber 2', callback: async () => {} });
 
       registry.register(AliasedEvent, [sub1]);
 
@@ -94,7 +94,7 @@ describe('SchemaRegistry', () => {
 
   describe('getEventClass', () => {
     it('should return event class by key', () => {
-      const subscriber = createSubscriber('test-subscriber', async () => {});
+      const subscriber = createSubscriber({ name: 'test-subscriber', description: 'Test subscriber', callback: async () => {} });
       registry.register(TestEvent, [subscriber]);
 
       const eventClass = registry.getEventClass('test.event');
@@ -103,7 +103,7 @@ describe('SchemaRegistry', () => {
     });
 
     it('should return event class by alias', () => {
-      const subscriber = createSubscriber('test-subscriber', async () => {});
+      const subscriber = createSubscriber({ name: 'test-subscriber', description: 'Test subscriber', callback: async () => {} });
       registry.register(AliasedEvent, [subscriber]);
 
       const eventClass = registry.getEventClass('user.created');
@@ -118,8 +118,8 @@ describe('SchemaRegistry', () => {
 
   describe('getSubscribers', () => {
     it('should return all subscribers for an event', () => {
-      const sub1 = createSubscriber('sub-1', async () => {});
-      const sub2 = createSubscriber('sub-2', async () => {});
+      const sub1 = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
+      const sub2 = createSubscriber({ name: 'sub-2', description: 'Subscriber 2', callback: async () => {} });
 
       registry.register(TestEvent, [sub1, sub2]);
 
@@ -136,8 +136,8 @@ describe('SchemaRegistry', () => {
 
   describe('getSubscriber', () => {
     it('should return specific subscriber by name', () => {
-      const sub1 = createSubscriber('sub-1', async () => {});
-      const sub2 = createSubscriber('sub-2', async () => {});
+      const sub1 = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
+      const sub2 = createSubscriber({ name: 'sub-2', description: 'Subscriber 2', callback: async () => {} });
 
       registry.register(TestEvent, [sub1, sub2]);
 
@@ -146,7 +146,7 @@ describe('SchemaRegistry', () => {
     });
 
     it('should return undefined for unknown subscriber', () => {
-      const sub = createSubscriber('sub-1', async () => {});
+      const sub = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
       registry.register(TestEvent, [sub]);
 
       expect(registry.getSubscriber('test.event', 'unknown')).toBeUndefined();
@@ -155,7 +155,10 @@ describe('SchemaRegistry', () => {
 
   describe('getSubscriberDefinition', () => {
     it('should return subscriber definition for pipeline', () => {
-      const sub = createSubscriber('sub-1', async () => {}, {
+      const sub = createSubscriber({
+        name: 'sub-1',
+        description: 'Subscriber 1',
+        callback: async () => {},
         idempotent: 'yes',
         importance: 'must-investigate',
         targetQueue: 'custom-queue',
@@ -169,6 +172,7 @@ describe('SchemaRegistry', () => {
       );
       expect(definition).toEqual({
         name: 'sub-1',
+        description: 'Subscriber 1',
         idempotent: 'yes',
         importance: 'must-investigate',
         targetQueue: 'custom-queue',
@@ -185,7 +189,7 @@ describe('SchemaRegistry', () => {
   describe('getExecutableSubscriber', () => {
     it('should return subscriber with callback', () => {
       const callback = async () => {};
-      const sub = createSubscriber('sub-1', callback);
+      const sub = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback });
 
       registry.register(TestEvent, [sub]);
 
@@ -200,8 +204,8 @@ describe('SchemaRegistry', () => {
 
   describe('getEventKeys', () => {
     it('should return all registered event keys', () => {
-      const sub1 = createSubscriber('sub-1', async () => {});
-      const sub2 = createSubscriber('sub-2', async () => {});
+      const sub1 = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
+      const sub2 = createSubscriber({ name: 'sub-2', description: 'Subscriber 2', callback: async () => {} });
 
       registry.register(TestEvent, [sub1]);
       registry.register(AliasedEvent, [sub2]);
@@ -215,7 +219,7 @@ describe('SchemaRegistry', () => {
 
   describe('validate', () => {
     it('should pass validation for valid schema', () => {
-      const sub = createSubscriber('sub-1', async () => {});
+      const sub = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
       registry.register(TestEvent, [sub]);
 
       const result = registry.validate();
@@ -224,8 +228,8 @@ describe('SchemaRegistry', () => {
     });
 
     it('should detect duplicate subscriber names', () => {
-      const sub1 = createSubscriber('duplicate-name', async () => {});
-      const sub2 = createSubscriber('duplicate-name', async () => {});
+      const sub1 = createSubscriber({ name: 'duplicate-name', description: 'Duplicate subscriber', callback: async () => {} });
+      const sub2 = createSubscriber({ name: 'duplicate-name', description: 'Duplicate subscriber', callback: async () => {} });
 
       registry.register(TestEvent, [sub1, sub2]);
 
@@ -239,7 +243,7 @@ describe('SchemaRegistry', () => {
 
   describe('clear', () => {
     it('should remove all entries', () => {
-      const sub = createSubscriber('sub-1', async () => {});
+      const sub = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
       registry.register(TestEvent, [sub]);
 
       registry.clear();

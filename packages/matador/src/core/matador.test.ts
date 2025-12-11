@@ -44,7 +44,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -62,7 +62,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
       };
@@ -91,7 +91,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('send-welcome-email', async () => {});
+      const subscriber = createSubscriber({ name: 'send-welcome-email', description: 'Sends welcome email', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -108,8 +108,8 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const userSub = createSubscriber('handle-user', async () => {});
-      const orderSub = createSubscriber('handle-order', async () => {});
+      const userSub = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const orderSub = createSubscriber({ name: 'handle-order', description: 'Handles order events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [userSub]],
@@ -129,7 +129,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -148,7 +148,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -169,8 +169,8 @@ describe('Matador', () => {
         .build();
 
       // Register duplicate subscriber names
-      const sub1 = createSubscriber('same-name', async () => {});
-      const sub2 = createSubscriber('same-name', async () => {});
+      const sub1 = createSubscriber({ name: 'same-name', description: 'Test subscriber', callback: async () => {} });
+      const sub2 = createSubscriber({ name: 'same-name', description: 'Test subscriber', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [sub1, sub2]],
@@ -189,7 +189,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -213,7 +213,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -240,7 +240,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -266,9 +266,9 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const sub1 = createSubscriber('sub-1', async () => {});
-      const sub2 = createSubscriber('sub-2', async () => {});
-      const sub3 = createSubscriber('sub-3', async () => {});
+      const sub1 = createSubscriber({ name: 'sub-1', description: 'Subscriber 1', callback: async () => {} });
+      const sub2 = createSubscriber({ name: 'sub-2', description: 'Subscriber 2', callback: async () => {} });
+      const sub3 = createSubscriber({ name: 'sub-3', description: 'Subscriber 3', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [sub1, sub2, sub3]],
@@ -294,7 +294,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -324,7 +324,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -344,7 +344,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -365,7 +365,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -397,7 +397,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -416,7 +416,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -439,7 +439,7 @@ describe('Matador', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
@@ -462,7 +462,7 @@ describe('Matador', () => {
         .addQueue('notifications')
         .build();
 
-      const subscriber = createSubscriber('handle-user', async () => {});
+      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],

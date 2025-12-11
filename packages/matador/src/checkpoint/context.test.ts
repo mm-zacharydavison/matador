@@ -21,6 +21,7 @@ function createTestEnvelope(id = 'test-envelope-id', attempts = 1): Envelope {
 function createTestSubscriber(name = 'test-subscriber'): SubscriberDefinition {
   return {
     name,
+    description: 'Test subscriber',
     idempotent: 'resumable',
     importance: 'should-investigate',
   };

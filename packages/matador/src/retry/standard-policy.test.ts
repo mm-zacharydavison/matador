@@ -260,6 +260,7 @@ function createContext(
 
   const subscriber: SubscriberDefinition = {
     name: 'test-subscriber',
+    description: 'Test subscriber',
     idempotent: 'yes',
     importance: 'should-investigate',
     ...subscriberOverrides,

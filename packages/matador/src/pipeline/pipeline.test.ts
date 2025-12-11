@@ -45,6 +45,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {}),
           })),
         },
@@ -139,6 +141,8 @@ describe('ProcessingPipeline', () => {
       const getSubscriberDefinitionMock = mock(() => subscriberDef);
       const getExecutableSubscriberMock = mock(() => ({
         name: 'test-subscriber',
+        description: 'Test subscriber',
+        idempotent: 'unknown' as const,
         callback: mock(async () => {}),
       }));
 
@@ -307,6 +311,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: callbackMock,
           })),
         },
@@ -336,6 +342,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: callbackMock,
           })),
         },
@@ -371,6 +379,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: callbackMock,
           })),
         },
@@ -419,6 +429,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => subscriberDef),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: callbackMock,
           })),
         },
@@ -461,6 +473,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => subscriberDef),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: callbackMock,
           })),
         },
@@ -494,6 +508,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => subscriberDef),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {}),
           })),
         },
@@ -534,6 +550,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => subscriberDef),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw error;
             }),
@@ -576,6 +594,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {}),
           })),
         },
@@ -615,6 +635,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Test error');
             }),
@@ -665,6 +687,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => subscriberDef),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw error;
             }),
@@ -701,6 +725,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Test error');
             }),
@@ -751,6 +777,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Test error message');
             }),
@@ -793,6 +821,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Fatal error');
             }),
@@ -839,6 +869,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Fatal error');
             }),
@@ -886,6 +918,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Fatal error');
             }),
@@ -930,6 +964,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Discard me');
             }),
@@ -970,6 +1006,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => subscriberDef),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {}),
           })),
         },
@@ -1002,6 +1040,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => subscriberDef),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw error;
             }),
@@ -1063,6 +1103,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('First failure');
             }),
@@ -1106,6 +1148,8 @@ describe('ProcessingPipeline', () => {
           getSubscriberDefinition: mock(() => createSubscriberDefinition()),
           getExecutableSubscriber: mock(() => ({
             name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
             callback: mock(async () => {
               throw new Error('Second failure');
             }),
@@ -1263,6 +1307,7 @@ function createSubscriberDefinition(
 ): SubscriberDefinition {
   return {
     name: 'test-subscriber',
+    description: 'Test subscriber',
     idempotent: 'unknown',
     importance: 'should-investigate',
     ...overrides,

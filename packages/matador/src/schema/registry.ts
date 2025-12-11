@@ -120,6 +120,7 @@ export class SchemaRegistry {
 
     const def: SubscriberDefinition = {
       name: subscriber.name,
+      description: subscriber.description,
       idempotent: subscriber.idempotent ?? 'unknown',
       importance: subscriber.importance ?? 'should-investigate',
     };

@@ -345,6 +345,7 @@ export class ProcessingPipeline {
     // Create a synthetic subscriber definition for retry policy
     const syntheticSubscriber: SubscriberDefinition = {
       name: envelope.docket.targetSubscriber,
+      description: 'Synthetic subscriber for unhandled message retry',
       idempotent: 'yes', // Safe to retry unhandled messages
       importance: envelope.docket.importance ?? 'should-investigate',
     };
