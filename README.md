@@ -9,6 +9,7 @@ An opinionated, batteries-included framework for using event transports (e.g. `R
 - [Vision](#vision)
 - [History](#history)
 - [Features](#features)
+- [Architecture](#architecture)
 - [Getting Started](#getting-started)
   - [Define a MatadorEvent](#define-a-matadorevent)
   - [Define a Subscriber](#define-a-subscriber)
@@ -86,6 +87,75 @@ This version of Matador is Matador V2, and was re-written from the ground up usi
 - Clear, documented, actionable errors for all error cases.
 - Poisoned message detection.
 - Resumable subscribers.
+
+# Architecture
+
+```
+                              DISPATCH PATH (Producer)
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  matador.send(Event, data)                                                   │
+│          │                                                                   │
+│          ▼                                                                   │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐                  │
+│  │    SCHEMA    │────▶│    FANOUT    │────▶│    CODEC     │                  │
+│  │              │     │              │     │              │                  │
+│  │ Event → Subs │     │  1 Event →   │     │ Envelope →   │                  │
+│  │   mapping    │     │ N Envelopes  │     │    bytes     │                  │
+│  └──────────────┘     └──────────────┘     └──────┬───────┘                  │
+│                                                   │                          │
+│                                                   ▼                          │
+│                                           ┌──────────────┐                   │
+│                                           │  TRANSPORT   │───────▶ Broker    │
+│                                           └──────────────┘                   │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                              CONSUME PATH (Consumer)
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  Broker ─────▶ TRANSPORT                                                     │
+│                    │                                                         │
+│                    ▼                                                         │
+│  ┌───────────────────────────────────────────────────────────────────────┐   │
+│  │                            PIPELINE                                   │   │
+│  │                                                                       │   │
+│  │  ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐       │   │
+│  │  │ CODEC  │──▶│ SCHEMA │──▶│ RETRY  │──▶│CALLBACK│──▶│ ACK /  │       │   │
+│  │  │        │   │        │   │ POLICY │   │        │   │ NACK   │       │   │
+│  │  │ bytes→ │   │ lookup │   │        │   │execute │   │        │       │   │
+│  │  │Envelope│   │  sub   │   │ check  │   │  sub   │   │ result │       │   │
+│  │  └────────┘   └────────┘   └────────┘   └────────┘   └────────┘       │   │
+│  │                                                                       │   │
+│  └───────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                            SUPPORTING COMPONENTS
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   TOPOLOGY   │  │    HOOKS     │  │   SHUTDOWN   │  │  CHECKPOINT  │      │
+│  │              │  │              │  │   MANAGER    │  │    STORE     │      │
+│  │ Queue config │  │  Lifecycle   │  │   Graceful   │  │  io() cache  │      │
+│  │ & structure  │  │  callbacks   │  │    drain     │  │  (optional)  │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+COMPONENT RESPONSIBILITIES
+─────────────────────────────────────────────────────────────────────────────────
+SCHEMA         Maps EventKey → [EventClass, Subscriber[]]
+FANOUT         Creates unique envelope per subscriber (1:N distribution)
+CODEC          Serializes/deserializes envelopes (JSON by default)
+TRANSPORT      Broker abstraction (RabbitMQ, Local, Multi)
+PIPELINE       Message processing: decode → validate → execute → ack/nack
+RETRY POLICY   Determines retry behavior based on attempts & idempotency
+TOPOLOGY       Defines queue structure (main, retry, dead-letter queues)
+HOOKS          Lifecycle callbacks for observability & dynamic config
+SHUTDOWN       Manages graceful shutdown with in-flight message draining
+CHECKPOINT     Persists io() results for resumable subscribers
+```
 
 # Getting Started
 
