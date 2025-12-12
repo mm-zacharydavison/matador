@@ -109,7 +109,11 @@ describe('FanoutEngine', () => {
 
   describe('send() with single subscriber', () => {
     it('should send event to one subscriber', async () => {
-      const subscriber = createSubscriber({ name: 'send-welcome-email', description: 'Sends welcome email', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'send-welcome-email',
+        description: 'Sends welcome email',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -128,7 +132,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should use default queue when subscriber has no targetQueue', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -171,7 +179,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should create envelope with correct structure', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -200,7 +212,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should include eventDescription from event class', async () => {
-      const subscriber = createSubscriber({ name: 'order-handler', description: 'Handles order events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'order-handler',
+        description: 'Handles order events',
+        callback: async () => {},
+      });
 
       schema.register(OrderPlacedEvent, [subscriber]);
 
@@ -224,9 +240,21 @@ describe('FanoutEngine', () => {
 
   describe('send() with multiple subscribers', () => {
     it('should send to all subscribers', async () => {
-      const sub1 = createSubscriber({ name: 'subscriber-1', description: 'Subscriber 1', callback: async () => {} });
-      const sub2 = createSubscriber({ name: 'subscriber-2', description: 'Subscriber 2', callback: async () => {} });
-      const sub3 = createSubscriber({ name: 'subscriber-3', description: 'Subscriber 3', callback: async () => {} });
+      const sub1 = createSubscriber({
+        name: 'subscriber-1',
+        description: 'Subscriber 1',
+        callback: async () => {},
+      });
+      const sub2 = createSubscriber({
+        name: 'subscriber-2',
+        description: 'Subscriber 2',
+        callback: async () => {},
+      });
+      const sub3 = createSubscriber({
+        name: 'subscriber-3',
+        description: 'Subscriber 3',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [sub1, sub2, sub3]);
 
@@ -244,8 +272,16 @@ describe('FanoutEngine', () => {
     });
 
     it('should create separate envelope for each subscriber', async () => {
-      const sub1 = createSubscriber({ name: 'subscriber-1', description: 'Subscriber 1', callback: async () => {} });
-      const sub2 = createSubscriber({ name: 'subscriber-2', description: 'Subscriber 2', callback: async () => {} });
+      const sub1 = createSubscriber({
+        name: 'subscriber-1',
+        description: 'Subscriber 1',
+        callback: async () => {},
+      });
+      const sub2 = createSubscriber({
+        name: 'subscriber-2',
+        description: 'Subscriber 2',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [sub1, sub2]);
 
@@ -311,7 +347,11 @@ describe('FanoutEngine', () => {
 
   describe('metadata merging', () => {
     it('should include event metadata in envelope', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEventWithMetadata, [subscriber]);
 
@@ -328,7 +368,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should include options metadata in envelope', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -349,7 +393,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should merge event and options metadata with options taking precedence', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEventWithMetadata, [subscriber]);
 
@@ -390,7 +438,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -410,7 +462,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should have empty metadata when no metadata provided', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -484,7 +540,11 @@ describe('FanoutEngine', () => {
         callback: async () => {},
         enabled: () => false,
       });
-      const sub3 = createSubscriber({ name: 'always-enabled-sub', description: 'Always enabled subscriber', callback: async () => {} });
+      const sub3 = createSubscriber({
+        name: 'always-enabled-sub',
+        description: 'Always enabled subscriber',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [sub1, sub2, sub3]);
 
@@ -548,7 +608,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should treat subscriber as enabled if no enabled hook provided', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -602,7 +666,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -690,7 +758,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -732,7 +804,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -748,7 +824,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should decrement count after send completes', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -778,7 +858,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -793,8 +877,16 @@ describe('FanoutEngine', () => {
     });
 
     it('should track multiple sequential sends to subscribers', async () => {
-      const sub1 = createSubscriber({ name: 'subscriber-1', description: 'Subscriber 1', callback: async () => {} });
-      const sub2 = createSubscriber({ name: 'subscriber-2', description: 'Subscriber 2', callback: async () => {} });
+      const sub1 = createSubscriber({
+        name: 'subscriber-1',
+        description: 'Subscriber 1',
+        callback: async () => {},
+      });
+      const sub2 = createSubscriber({
+        name: 'subscriber-2',
+        description: 'Subscriber 2',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [sub1, sub2]);
 
@@ -837,7 +929,11 @@ describe('FanoutEngine', () => {
 
   describe('correlation ID propagation', () => {
     it('should include correlation ID in envelope when provided', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -858,8 +954,16 @@ describe('FanoutEngine', () => {
     });
 
     it('should propagate same correlation ID to all subscribers', async () => {
-      const sub1 = createSubscriber({ name: 'subscriber-1', description: 'Subscriber 1', callback: async () => {} });
-      const sub2 = createSubscriber({ name: 'subscriber-2', description: 'Subscriber 2', callback: async () => {} });
+      const sub1 = createSubscriber({
+        name: 'subscriber-1',
+        description: 'Subscriber 1',
+        callback: async () => {},
+      });
+      const sub2 = createSubscriber({
+        name: 'subscriber-2',
+        description: 'Subscriber 2',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [sub1, sub2]);
 
@@ -883,7 +987,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should have undefined correlation ID when not provided', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -916,7 +1024,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -964,7 +1076,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -1005,9 +1121,21 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const sub1 = createSubscriber({ name: 'subscriber-1', description: 'Subscriber 1', callback: async () => {} });
-      const sub2 = createSubscriber({ name: 'subscriber-2', description: 'Subscriber 2', callback: async () => {} });
-      const sub3 = createSubscriber({ name: 'subscriber-3', description: 'Subscriber 3', callback: async () => {} });
+      const sub1 = createSubscriber({
+        name: 'subscriber-1',
+        description: 'Subscriber 1',
+        callback: async () => {},
+      });
+      const sub2 = createSubscriber({
+        name: 'subscriber-2',
+        description: 'Subscriber 2',
+        callback: async () => {},
+      });
+      const sub3 = createSubscriber({
+        name: 'subscriber-3',
+        description: 'Subscriber 3',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [sub1, sub2, sub3]);
 
@@ -1072,7 +1200,11 @@ describe('FanoutEngine', () => {
         defaultQueue: 'events',
       });
 
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -1091,7 +1223,11 @@ describe('FanoutEngine', () => {
 
   describe('delay options', () => {
     it('should pass delay option to transport', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -1114,7 +1250,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should include delay in envelope', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -1141,7 +1281,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should not pass delay option when delayMs is undefined', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 
@@ -1184,7 +1328,11 @@ describe('FanoutEngine', () => {
     });
 
     it('should default to should-investigate when importance not specified', async () => {
-      const subscriber = createSubscriber({ name: 'handle-user', description: 'Handles user events', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
 
       schema.register(UserCreatedEvent, [subscriber]);
 

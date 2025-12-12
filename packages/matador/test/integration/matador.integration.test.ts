@@ -478,7 +478,11 @@ describe('Matador Integration Tests', () => {
         .addQueue('events')
         .build();
 
-      const subscriber = createSubscriber({ name: 'test-subscriber', description: 'Test subscriber', callback: async () => {} });
+      const subscriber = createSubscriber({
+        name: 'test-subscriber',
+        description: 'Test subscriber',
+        callback: async () => {},
+      });
 
       const schema: MatadorSchema = {
         [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],

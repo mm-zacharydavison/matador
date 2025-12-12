@@ -1,5 +1,5 @@
-import type { Envelope, SubscriberDefinition } from '../types/index.js';
 import { DuplicateIoKeyError } from '../errors/index.js';
+import type { Envelope, SubscriberDefinition } from '../types/index.js';
 import type {
   Checkpoint,
   CheckpointHitContext,

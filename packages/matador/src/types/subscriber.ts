@@ -282,7 +282,9 @@ export interface CreateSubscriberStubInput {
  * });
  * ```
  */
-export function createSubscriberStub(input: CreateSubscriberStubInput): SubscriberStub {
+export function createSubscriberStub(
+  input: CreateSubscriberStubInput,
+): SubscriberStub {
   return {
     name: input.name,
     description: input.description,

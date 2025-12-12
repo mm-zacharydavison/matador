@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
+import { DuplicateIoKeyError } from '../errors/index.js';
 import type { Envelope, SubscriberDefinition } from '../types/index.js';
 import { ResumableContext } from './context.js';
-import { DuplicateIoKeyError } from '../errors/index.js';
 import { MemoryCheckpointStore } from './stores/memory.js';
 
 function createTestEnvelope(id = 'test-envelope-id', attempts = 1): Envelope {

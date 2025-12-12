@@ -18,6 +18,7 @@ export {
 // Types
 export type {
   AnySubscriber,
+  BaseSubscriberOptions,
   CreateEnvelopeOptions,
   DeliveryMode,
   Docket,

@@ -1242,7 +1242,9 @@ function createMockConfig(
     );
   };
 
-  const defaultRetryPolicy: RetryPolicy = isFullRetryPolicy(overrides.retryPolicy)
+  const defaultRetryPolicy: RetryPolicy = isFullRetryPolicy(
+    overrides.retryPolicy,
+  )
     ? overrides.retryPolicy
     : {
         shouldRetry: mock(
