@@ -21,6 +21,9 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "references": [{ "path": "./packages/matador" }],
+  "references": [
+    { "path": "./packages/matador" },
+    { "path": "./packages/matador-nest" }
+  ],
   "files": []
 }

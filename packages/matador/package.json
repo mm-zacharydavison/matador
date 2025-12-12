@@ -1,6 +1,6 @@
 {
   "name": "@zdavison/matador",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A batteries-included event system.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -22,7 +22,7 @@
     "matador": "./cli.ts"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "rm -rf dist *.tsbuildinfo && tsup && tsc --build && cp dist/index.d.ts dist/index.d.cts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:integration": "bun test --grep integration",

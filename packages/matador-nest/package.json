@@ -1,6 +1,6 @@
 {
   "name": "@zdavison/matador-nest",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "description": "NestJS integration for Matador event processing library",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -29,7 +29,7 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "rm -rf dist *.tsbuildinfo && tsup && tsc --build && cp dist/index.d.ts dist/index.d.cts && cp dist/testing.d.ts dist/testing.d.cts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "lint": "bunx biome check .",
@@ -40,7 +40,7 @@
   "peerDependencies": {
     "@nestjs/common": "^10.0.0 || ^11.0.0",
     "@nestjs/core": "^10.0.0 || ^11.0.0",
-    "@zdavison/matador": "^2.0.0",
+    "@zdavison/matador": "^2.0.1",
     "reflect-metadata": "^0.1.13 || ^0.2.0"
   },
   "devDependencies": {
