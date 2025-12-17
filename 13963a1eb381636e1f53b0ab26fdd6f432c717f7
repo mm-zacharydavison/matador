@@ -1,0 +1,56 @@
+packages/matador/src/transport/rabbitmq/rabbitmq-transport.ts
+  2888e4225c25e9cf 32-34,110,120,452-454
+docs/plans/matador-nest.md
+  2888e4225c25e9cf 159-160,194
+packages/matador/src/types/index.ts
+  6f2ade8044f67430 13,16
+packages/matador/test/e2e/transport-compliance.e2e.test.ts
+  2888e4225c25e9cf 119
+packages/matador-nest/src/module/matador.module.ts
+  2888e4225c25e9cf 30-32,55
+packages/matador/src/types/envelope.ts
+  6f2ade8044f67430 2,156-188,191-197,199,203-213,217-232,235-242
+packages/matador/test/e2e/multi-transport.e2e.test.ts
+  2888e4225c25e9cf 59
+packages/matador/src/transport/rabbitmq/rabbitmq-transport.test.ts
+  2888e4225c25e9cf 69,101
+examples/nestjs/src/app.module.ts
+  2888e4225c25e9cf 17-19
+README.md
+  2888e4225c25e9cf 214-215,855-856
+packages/matador/test/e2e/rabbitmq-transport.e2e.test.ts
+  2888e4225c25e9cf 52,206,234,521
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "13963a1eb381636e1f53b0ab26fdd6f432c717f7",
+  "prompts": {
+    "2888e4225c25e9cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ad715f0-f9d4-4b1d-bc88-f92463479625",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 38,
+      "total_deletions": 32,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "6f2ade8044f67430": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "983bdd35-6c5a-40c0-b5a9-3c60afa22554",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 89,
+      "total_deletions": 12,
+      "accepted_lines": 80,
+      "overriden_lines": 0
+    }
+  }
+}
