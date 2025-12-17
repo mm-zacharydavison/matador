@@ -1,0 +1,35 @@
+packages/matador/src/topology/builder.ts
+  65e1103a00dbe75f 182-183
+packages/matador/src/topology/types.ts
+  65e1103a00dbe75f 23,42-101,170-183
+packages/matador/test/e2e/rabbitmq-transport.e2e.test.ts
+  65e1103a00dbe75f 14,225-510
+packages/matador/src/index.ts
+  65e1103a00dbe75f 99-100,103,109
+packages/matador/src/topology/builder.test.ts
+  65e1103a00dbe75f 3,275-326,415-451
+packages/matador/src/transport/rabbitmq/rabbitmq-transport.ts
+  65e1103a00dbe75f 607-610,612-614,621-622,631,643-644
+packages/matador/src/topology/index.ts
+  65e1103a00dbe75f 5-6,9,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "db173f1baa8329a24fcfca5ae83ad00ccfa1b34b",
+  "prompts": {
+    "65e1103a00dbe75f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "479f1120-c935-4248-b868-f04981931bac",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 548,
+      "total_deletions": 44,
+      "accepted_lines": 483,
+      "overriden_lines": 1
+    }
+  }
+}
