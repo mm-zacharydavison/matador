@@ -241,7 +241,7 @@ export class MatadorService
       this.options.hooks,
     );
 
-    this.logger.log('Matador instance initialized');
+    this.logger.log('[Matador] 🟢 matador-nest initialized.');
   }
 
   private shouldAutoStart(): boolean {
@@ -255,7 +255,7 @@ export class MatadorService
 
     await this.matador.start();
     this.isStarted = true;
-    this.logger.log('Matador started');
+    this.logger.log('[Matador] 🟢 Started');
   }
 
   private async doShutdown(): Promise<void> {
@@ -264,7 +264,7 @@ export class MatadorService
     }
 
     this.isShuttingDown = true;
-    this.logger.log('Graceful shutdown initiated, draining in-flight messages');
+    this.logger.log('[Matador] ⏳ Graceful shutdown initiated, draining in-flight messages');
 
     // Wait for in-flight messages to complete (with configurable timeout)
     const timeoutMs =
@@ -273,11 +273,11 @@ export class MatadorService
 
     if (!drained) {
       this.logger.warn(
-        `Shutdown timeout reached after ${timeoutMs}ms, some messages may not have completed`,
+        `[Matador] 🟡 Shutdown timeout reached after ${timeoutMs}ms, some messages may not have completed`,
       );
     }
 
     await this.matador.shutdown();
-    this.logger.log('Matador shutdown complete');
+    this.logger.log('[Matador] 🟢 Shutdown complete');
   }
 }

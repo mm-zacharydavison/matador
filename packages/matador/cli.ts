@@ -327,7 +327,7 @@ async function dispatchEvent(
 
   try {
     await matador.start();
-    logSuccess('Matador started');
+    logSuccess('[Matador] Started.');
 
     // Create and dispatch the event
     const event = new EventClass(eventSpec.data, eventSpec.before);
