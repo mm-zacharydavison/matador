@@ -162,13 +162,10 @@ export function createEnvelope<T>(
  * await mySubscriber.callback(envelope, event);
  * ```
  */
-export function createDummyEnvelope<T>(event: {
-  data: T;
-  constructor: { key: string };
-}): Envelope<T> {
+export function createDummyEnvelope<T>(data: T): Envelope<T> {
   return createEnvelope({
-    data: event.data,
-    eventKey: event.constructor.key,
+    data,
+    eventKey: 'dummy.event.key',
     targetSubscriber: 'dummy-subscriber',
     importance: 'can-ignore',
   });
