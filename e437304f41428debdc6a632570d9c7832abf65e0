@@ -1,0 +1,25 @@
+packages/matador/src/schema/registry.ts
+  b53a51e4c37c753b 125-128
+packages/matador/src/types/subscriber.ts
+  b53a51e4c37c753b 137,323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "e437304f41428debdc6a632570d9c7832abf65e0",
+  "prompts": {
+    "b53a51e4c37c753b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5675fdf6-427e-4efc-bc4c-f9d73c9040d9",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 8,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}
