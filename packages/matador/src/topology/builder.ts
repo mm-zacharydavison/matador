@@ -13,6 +13,15 @@ import type {
 export type QueueOptions = Omit<QueueDefinition, 'name'>;
 
 /**
+ * Type guard to check if the argument is a QueueDefinition object.
+ */
+function isQueueDefinition(
+  arg: string | QueueDefinition,
+): arg is QueueDefinition {
+  return typeof arg === 'object' && arg !== null && 'name' in arg;
+}
+
+/**
  * Error thrown when topology validation fails.
  */
 export class TopologyValidationError extends Error implements HasDescription {
@@ -64,17 +73,46 @@ export class TopologyBuilder {
 
   /**
    * Adds a queue to the topology.
+   * @param definition - A complete QueueDefinition object
    */
-  addQueue(name: string, options: QueueOptions = {}): this {
-    this.queues.push({ name, ...options });
+  addQueue(definition: QueueDefinition): this;
+  /**
+   * Adds a queue to the topology.
+   * @param name - Queue name
+   * @param options - Queue options
+   */
+  addQueue(name: string, options?: QueueOptions): this;
+  addQueue(
+    nameOrDefinition: string | QueueDefinition,
+    options: QueueOptions = {},
+  ): this {
+    if (isQueueDefinition(nameOrDefinition)) {
+      this.queues.push(nameOrDefinition);
+    } else {
+      this.queues.push({ name: nameOrDefinition, ...options });
+    }
     return this;
   }
 
   /**
    * Alias for addQueue().
+   * @param definition - A complete QueueDefinition object
    */
-  queue(name: string, options: QueueOptions = {}): this {
-    return this.addQueue(name, options);
+  queue(definition: QueueDefinition): this;
+  /**
+   * Alias for addQueue().
+   * @param name - Queue name
+   * @param options - Queue options
+   */
+  queue(name: string, options?: QueueOptions): this;
+  queue(
+    nameOrDefinition: string | QueueDefinition,
+    options: QueueOptions = {},
+  ): this {
+    if (isQueueDefinition(nameOrDefinition)) {
+      return this.addQueue(nameOrDefinition);
+    }
+    return this.addQueue(nameOrDefinition, options);
   }
 
   /**

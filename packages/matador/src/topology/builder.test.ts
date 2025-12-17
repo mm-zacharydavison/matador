@@ -272,4 +272,90 @@ describe('TopologyBuilder', () => {
       expect(topology.queues[0]?.exact).toBe(true);
     });
   });
+
+  describe('addQueue with QueueDefinition object', () => {
+    it('should accept a QueueDefinition object', () => {
+      const queueDef = {
+        name: 'events',
+        concurrency: 5,
+        consumerTimeout: 30000,
+      };
+
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue(queueDef)
+        .build();
+
+      expect(topology.queues).toHaveLength(1);
+      expect(topology.queues[0]?.name).toBe('events');
+      expect(topology.queues[0]?.concurrency).toBe(5);
+      expect(topology.queues[0]?.consumerTimeout).toBe(30000);
+    });
+
+    it('should allow reusing queue definitions across builders', () => {
+      const sharedQueue = {
+        name: 'shared-queue',
+        concurrency: 10,
+        exact: true,
+      };
+
+      const topology1 = TopologyBuilder.create()
+        .withNamespace('app1')
+        .addQueue(sharedQueue)
+        .build();
+
+      const topology2 = TopologyBuilder.create()
+        .withNamespace('app2')
+        .addQueue(sharedQueue)
+        .build();
+
+      expect(topology1.queues[0]).toEqual(sharedQueue);
+      expect(topology2.queues[0]).toEqual(sharedQueue);
+    });
+
+    it('should work with queue() alias', () => {
+      const queueDef = {
+        name: 'analytics',
+        priorities: true,
+      };
+
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .queue(queueDef)
+        .build();
+
+      expect(topology.queues[0]?.name).toBe('analytics');
+      expect(topology.queues[0]?.priorities).toBe(true);
+    });
+
+    it('should mix QueueDefinition objects with name+options style', () => {
+      const reusableQueue = {
+        name: 'shared',
+        concurrency: 3,
+      };
+
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue(reusableQueue)
+        .addQueue('local', { concurrency: 1 })
+        .build();
+
+      expect(topology.queues).toHaveLength(2);
+      expect(topology.queues[0]?.name).toBe('shared');
+      expect(topology.queues[1]?.name).toBe('local');
+    });
+
+    it('should validate QueueDefinition objects the same way', () => {
+      const invalidQueue = {
+        name: '123invalid',
+        concurrency: 5,
+      };
+
+      const builder = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue(invalidQueue);
+
+      expect(() => builder.build()).toThrow('must start with a letter');
+    });
+  });
 });
