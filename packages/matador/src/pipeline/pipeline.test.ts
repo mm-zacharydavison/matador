@@ -10,7 +10,11 @@ import type { RetryDecision, RetryPolicy } from '../retry/index.js';
 import { StandardRetryPolicy } from '../retry/index.js';
 import type { SchemaRegistry } from '../schema/index.js';
 import type { MessageReceipt, Transport } from '../transport/index.js';
-import type { Dispatcher, Envelope, SubscriberDefinition } from '../types/index.js';
+import type {
+  Dispatcher,
+  Envelope,
+  SubscriberDefinition,
+} from '../types/index.js';
 import { createEnvelope } from '../types/index.js';
 import type { PipelineConfig } from './pipeline.js';
 import { ProcessingPipeline } from './pipeline.js';

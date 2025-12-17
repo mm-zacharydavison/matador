@@ -56,13 +56,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": [
-    "nestjs",
-    "events",
-    "messaging",
-    "queue",
-    "rabbitmq",
-    "matador"
-  ],
+  "keywords": ["nestjs", "events", "messaging", "queue", "rabbitmq", "matador"],
   "license": "MIT"
 }

@@ -20,7 +20,7 @@ export interface Topology {
  * Individual queue definition.
  */
 export interface QueueDefinition {
-  /** Queue name (will be prefixed with namespace) */
+  /** Queue name (will be prefixed with namespace unless exact: true) */
   readonly name: string;
 
   /** Concurrency for this queue */
@@ -39,6 +39,66 @@ export interface QueueDefinition {
    * queues that are not managed by Matador.
    */
   readonly exact?: boolean | undefined;
+
+  /** Transport-specific queue options */
+  readonly transport?: TransportQueueOptions | undefined;
+}
+
+/**
+ * Transport-specific queue options.
+ * Each transport can define its own options under its transport name key.
+ */
+export interface TransportQueueOptions {
+  /** RabbitMQ-specific queue options */
+  readonly rabbitmq?: RabbitMQQueueDefinition | undefined;
+}
+
+/**
+ * RabbitMQ-specific queue definition options.
+ */
+export interface RabbitMQQueueDefinition {
+  /**
+   * Exact RabbitMQ queue assertion options.
+   * When provided, these options completely replace all auto-computed defaults
+   * (durable, x-queue-type, x-dead-letter-exchange, etc.).
+   */
+  readonly options?: RabbitMQQueueOptions | undefined;
+}
+
+/**
+ * RabbitMQ queue assertion options.
+ * Maps to amqplib's Options.AssertQueue.
+ */
+export interface RabbitMQQueueOptions {
+  /** Queue survives broker restart */
+  readonly durable?: boolean | undefined;
+
+  /** Queue is deleted when last consumer unsubscribes */
+  readonly autoDelete?: boolean | undefined;
+
+  /** Queue can only be used by the declaring connection */
+  readonly exclusive?: boolean | undefined;
+
+  /** Exchange to which dead-lettered messages are sent */
+  readonly deadLetterExchange?: string | undefined;
+
+  /** Routing key for dead-lettered messages */
+  readonly deadLetterRoutingKey?: string | undefined;
+
+  /** Message TTL in milliseconds */
+  readonly messageTtl?: number | undefined;
+
+  /** Queue expires after this many milliseconds of non-use */
+  readonly expires?: number | undefined;
+
+  /** Maximum number of messages in the queue */
+  readonly maxLength?: number | undefined;
+
+  /** Maximum priority level (0-255) */
+  readonly maxPriority?: number | undefined;
+
+  /** Additional x-* arguments for RabbitMQ */
+  readonly arguments?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -106,4 +166,18 @@ export function getRetryQueueName(
   queueName: string,
 ): string {
   return `${namespace}.${queueName}.retry`;
+}
+
+/**
+ * Resolves the actual queue name for a given queue definition.
+ * When exact: true, returns name as-is. Otherwise, returns namespace.name.
+ */
+export function resolveQueueName(
+  namespace: string,
+  queueDef: QueueDefinition,
+): string {
+  if (queueDef.exact) {
+    return queueDef.name;
+  }
+  return `${namespace}.${queueDef.name}`;
 }

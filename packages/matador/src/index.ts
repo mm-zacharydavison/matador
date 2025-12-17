@@ -96,13 +96,17 @@ export type {
   DeadLetterQueueConfig,
   QueueDefinition,
   QueueOptions,
+  RabbitMQQueueDefinition,
+  RabbitMQQueueOptions,
   RetryConfig,
   Topology,
+  TransportQueueOptions,
 } from './topology/index.js';
 export {
   getDeadLetterQueueName,
   getQualifiedQueueName,
   getRetryQueueName,
+  resolveQueueName,
   TopologyBuilder,
   TopologyValidationError,
 } from './topology/index.js';

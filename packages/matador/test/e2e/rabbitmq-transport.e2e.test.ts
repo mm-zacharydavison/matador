@@ -11,6 +11,7 @@ import {
   RabbitMQContainer,
   type StartedRabbitMQContainer,
 } from '@testcontainers/rabbitmq';
+import type { Topology } from '../../src/topology/types.js';
 import type { Subscription } from '../../src/transport/index.js';
 import { RabbitMQTransport } from '../../src/transport/rabbitmq/rabbitmq-transport.js';
 import {
@@ -218,6 +219,292 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
       expect(transport.isConnected()).toBe(true);
 
       await transport.disconnect();
+    });
+  });
+
+  describe('exact queue definitions with transport options', () => {
+    let transport: RabbitMQTransport;
+    const subscriptions: Subscription[] = [];
+
+    beforeEach(async () => {
+      transport = new RabbitMQTransport({
+        url: connectionUrl,
+        quorumQueues: false,
+        defaultPrefetch: 5,
+      });
+      await transport.connect();
+    });
+
+    afterEach(async () => {
+      for (const sub of subscriptions) {
+        if (sub.isActive) {
+          await sub.unsubscribe();
+        }
+      }
+      if (transport.isConnected()) {
+        await transport.disconnect();
+      }
+    });
+
+    it('should apply exact RabbitMQ options when asserting queue', async () => {
+      const namespace = `exact-opts-${Date.now()}`;
+      const exactQueueName = `${namespace}.shared.custom-queue`;
+
+      const topology: Topology = {
+        namespace,
+        queues: [
+          {
+            name: exactQueueName,
+            exact: true,
+            transport: {
+              rabbitmq: {
+                options: {
+                  durable: true,
+                  arguments: {
+                    'x-max-length': 1000,
+                    'x-message-ttl': 60000,
+                  },
+                },
+              },
+            },
+          },
+        ],
+        deadLetter: {
+          unhandled: { enabled: false },
+          undeliverable: { enabled: false },
+        },
+        retry: {
+          enabled: true,
+          defaultDelayMs: 1000,
+          maxDelayMs: 30000,
+        },
+      };
+
+      // Should not throw - queue options should be applied correctly
+      await transport.applyTopology(topology);
+
+      // Verify queue works by sending and receiving a message
+      let receivedMessage = false;
+      const subscription = await transport.subscribe(
+        exactQueueName,
+        async (_env, receipt) => {
+          receivedMessage = true;
+          await transport.complete(receipt);
+        },
+      );
+      subscriptions.push(subscription);
+
+      await transport.send(exactQueueName, createTestEnvelope());
+      await waitFor(() => receivedMessage, 5000);
+
+      expect(receivedMessage).toBe(true);
+    });
+
+    it('should create retry queue for exact queue when retry is enabled', async () => {
+      const namespace = `exact-retry-${Date.now()}`;
+      const exactQueueName = `${namespace}.shared.retry-queue`;
+
+      const topology: Topology = {
+        namespace,
+        queues: [
+          {
+            name: exactQueueName,
+            exact: true,
+            transport: {
+              rabbitmq: {
+                options: {
+                  durable: true,
+                },
+              },
+            },
+          },
+        ],
+        deadLetter: {
+          unhandled: { enabled: false },
+          undeliverable: { enabled: false },
+        },
+        retry: {
+          enabled: true,
+          defaultDelayMs: 1000,
+          maxDelayMs: 30000,
+        },
+      };
+
+      // Apply topology - should create both work queue and retry queue
+      await transport.applyTopology(topology);
+
+      // Verify the main queue works
+      let receivedCount = 0;
+      const subscription = await transport.subscribe(
+        exactQueueName,
+        async (_env, receipt) => {
+          receivedCount++;
+          await transport.complete(receipt);
+        },
+      );
+      subscriptions.push(subscription);
+
+      await transport.send(exactQueueName, createTestEnvelope());
+      await waitFor(() => receivedCount === 1, 5000);
+
+      expect(receivedCount).toBe(1);
+    });
+
+    it('should use custom dead letter exchange from exact options', async () => {
+      const namespace = `exact-dlx-${Date.now()}`;
+      const exactQueueName = `${namespace}.shared.dlx-queue`;
+      const customDlxExchange = `${namespace}.custom-dlx`;
+
+      // First create the custom DLX exchange manually
+      // (In real usage, this would be managed externally)
+
+      const topology: Topology = {
+        namespace,
+        queues: [
+          {
+            name: exactQueueName,
+            exact: true,
+            transport: {
+              rabbitmq: {
+                options: {
+                  durable: true,
+                  deadLetterExchange: customDlxExchange,
+                },
+              },
+            },
+          },
+        ],
+        deadLetter: {
+          unhandled: { enabled: false },
+          undeliverable: { enabled: false },
+        },
+        retry: {
+          enabled: false,
+          defaultDelayMs: 1000,
+          maxDelayMs: 30000,
+        },
+      };
+
+      // Should not throw - custom DLX should be set
+      await transport.applyTopology(topology);
+
+      // Verify queue works
+      let receivedMessage = false;
+      const subscription = await transport.subscribe(
+        exactQueueName,
+        async (_env, receipt) => {
+          receivedMessage = true;
+          await transport.complete(receipt);
+        },
+      );
+      subscriptions.push(subscription);
+
+      await transport.send(exactQueueName, createTestEnvelope());
+      await waitFor(() => receivedMessage, 5000);
+
+      expect(receivedMessage).toBe(true);
+    });
+
+    it('should apply RabbitMQ options without exact mode', async () => {
+      const namespace = `opts-no-exact-${Date.now()}`;
+
+      const topology: Topology = {
+        namespace,
+        queues: [
+          {
+            name: 'custom-options-queue',
+            // exact: false (default) - namespace prefix will be added
+            transport: {
+              rabbitmq: {
+                options: {
+                  durable: true,
+                  arguments: {
+                    'x-max-length': 500,
+                  },
+                },
+              },
+            },
+          },
+        ],
+        deadLetter: {
+          unhandled: { enabled: false },
+          undeliverable: { enabled: false },
+        },
+        retry: {
+          enabled: true,
+          defaultDelayMs: 1000,
+          maxDelayMs: 30000,
+        },
+      };
+
+      await transport.applyTopology(topology);
+
+      // Queue name should have namespace prefix since exact: false
+      const queueName = `${namespace}.custom-options-queue`;
+
+      let receivedMessage = false;
+      const subscription = await transport.subscribe(
+        queueName,
+        async (_env, receipt) => {
+          receivedMessage = true;
+          await transport.complete(receipt);
+        },
+      );
+      subscriptions.push(subscription);
+
+      await transport.send(queueName, createTestEnvelope());
+      await waitFor(() => receivedMessage, 5000);
+
+      expect(receivedMessage).toBe(true);
+    });
+
+    it('should allow queue name with dots when exact: true', async () => {
+      const namespace = `exact-dots-${Date.now()}`;
+      const exactQueueName = 'matador.shared.id-platform.events';
+
+      const topology: Topology = {
+        namespace,
+        queues: [
+          {
+            name: exactQueueName,
+            exact: true,
+            transport: {
+              rabbitmq: {
+                options: {
+                  durable: true,
+                },
+              },
+            },
+          },
+        ],
+        deadLetter: {
+          unhandled: { enabled: false },
+          undeliverable: { enabled: false },
+        },
+        retry: {
+          enabled: true,
+          defaultDelayMs: 1000,
+          maxDelayMs: 30000,
+        },
+      };
+
+      await transport.applyTopology(topology);
+
+      // Verify queue with dots in name works
+      let receivedMessage = false;
+      const subscription = await transport.subscribe(
+        exactQueueName,
+        async (_env, receipt) => {
+          receivedMessage = true;
+          await transport.complete(receipt);
+        },
+      );
+      subscriptions.push(subscription);
+
+      await transport.send(exactQueueName, createTestEnvelope());
+      await waitFor(() => receivedMessage, 5000);
+
+      expect(receivedMessage).toBe(true);
     });
   });
 

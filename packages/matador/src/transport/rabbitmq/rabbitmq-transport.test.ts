@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test';
 import type { Logger } from '../../hooks/index.js';
-import { redactAmqpUrl, RabbitMQTransport } from './rabbitmq-transport.js';
+import { RabbitMQTransport, redactAmqpUrl } from './rabbitmq-transport.js';
 
 describe('redactAmqpUrl', () => {
   it('should redact username and password with 4 asterisks', () => {

@@ -179,7 +179,8 @@ export class TopologyBuilder {
     for (const queue of this.queues) {
       if (!queue.name || queue.name.trim() === '') {
         issues.push('Queue name cannot be empty');
-      } else if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(queue.name)) {
+      } else if (!queue.exact && !/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(queue.name)) {
+        // Skip pattern validation for exact queues (allows names like 'matador.shared.id-platform')
         issues.push(
           `Queue name "${queue.name}" must start with a letter and contain only alphanumeric characters, underscores, and hyphens`,
         );

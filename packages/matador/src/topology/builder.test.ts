@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { TopologyBuilder, TopologyValidationError } from './builder.js';
+import { resolveQueueName } from './types.js';
 
 describe('TopologyBuilder', () => {
   describe('withNamespace', () => {
@@ -271,6 +272,58 @@ describe('TopologyBuilder', () => {
 
       expect(topology.queues[0]?.exact).toBe(true);
     });
+
+    it('should allow dots in queue name when exact: true', () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('matador.shared.id-platform', { exact: true })
+        .build();
+
+      expect(topology.queues[0]?.name).toBe('matador.shared.id-platform');
+      expect(topology.queues[0]?.exact).toBe(true);
+    });
+
+    it('should reject dots in queue name when exact: false', () => {
+      const builder = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('invalid.queue.name');
+
+      expect(() => builder.build()).toThrow('must start with a letter');
+    });
+
+    it('should allow transport-specific RabbitMQ options with exact queue', () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('matador.shared.id-platform', {
+          exact: true,
+          transport: {
+            rabbitmq: {
+              options: {
+                durable: true,
+                deadLetterExchange: 'matador.shared.dlx-undeliverable',
+                arguments: {
+                  'x-queue-type': 'quorum',
+                },
+              },
+            },
+          },
+        })
+        .build();
+
+      expect(topology.queues[0]?.name).toBe('matador.shared.id-platform');
+      expect(topology.queues[0]?.exact).toBe(true);
+      expect(topology.queues[0]?.transport?.rabbitmq?.options?.durable).toBe(
+        true,
+      );
+      expect(
+        topology.queues[0]?.transport?.rabbitmq?.options?.deadLetterExchange,
+      ).toBe('matador.shared.dlx-undeliverable');
+      expect(
+        topology.queues[0]?.transport?.rabbitmq?.options?.arguments?.[
+          'x-queue-type'
+        ],
+      ).toBe('quorum');
+    });
   });
 
   describe('addQueue with QueueDefinition object', () => {
@@ -357,5 +410,42 @@ describe('TopologyBuilder', () => {
 
       expect(() => builder.build()).toThrow('must start with a letter');
     });
+  });
+});
+
+describe('resolveQueueName', () => {
+  it('should return namespace.name for regular queues', () => {
+    const queueDef = { name: 'events' };
+    expect(resolveQueueName('myapp', queueDef)).toBe('myapp.events');
+  });
+
+  it('should return name as-is when exact: true', () => {
+    const queueDef = { name: 'matador.shared.id-platform', exact: true };
+    expect(resolveQueueName('myapp', queueDef)).toBe(
+      'matador.shared.id-platform',
+    );
+  });
+
+  it('should return namespace.name when exact: false', () => {
+    const queueDef = { name: 'events', exact: false };
+    expect(resolveQueueName('myapp', queueDef)).toBe('myapp.events');
+  });
+
+  it('should work with full QueueDefinition including transport options', () => {
+    const queueDef = {
+      name: 'matador.shared.id-platform',
+      exact: true,
+      transport: {
+        rabbitmq: {
+          options: {
+            durable: true,
+            deadLetterExchange: 'matador.shared.dlx-undeliverable',
+          },
+        },
+      },
+    };
+    expect(resolveQueueName('myapp', queueDef)).toBe(
+      'matador.shared.id-platform',
+    );
   });
 });

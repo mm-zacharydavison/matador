@@ -604,36 +604,44 @@ export class RabbitMQTransport implements Transport {
       ? queueDef.name
       : `${topology.namespace}.${queueDef.name}`;
 
-    const queueOptions: Options.AssertQueue = {
-      durable: true,
-      arguments: {} as Record<string, unknown>,
-    };
+    const rabbitmqOptions = queueDef.transport?.rabbitmq?.options;
 
-    // Use quorum queues for durability
-    if (this.config.quorumQueues && !queueDef.exact) {
-      queueOptions.arguments['x-queue-type'] = 'quorum';
+    // If user provided exact RabbitMQ options, use them directly (replaces all defaults)
+    if (rabbitmqOptions) {
+      await channel.assertQueue(queueName, rabbitmqOptions);
+    } else {
+      // Use computed defaults
+      const queueOptions: Options.AssertQueue = {
+        durable: true,
+        arguments: {} as Record<string, unknown>,
+      };
+
+      // Use quorum queues for durability
+      if (this.config.quorumQueues && !queueDef.exact) {
+        queueOptions.arguments['x-queue-type'] = 'quorum';
+      }
+
+      // Set up dead-letter exchange routing
+      const dlxExchange = this.getDLXExchangeName(topology.namespace);
+      if (
+        topology.deadLetter.unhandled.enabled ||
+        topology.deadLetter.undeliverable.enabled
+      ) {
+        queueOptions.arguments['x-dead-letter-exchange'] = dlxExchange;
+      }
+
+      // Enable priority if requested
+      if (queueDef.priorities) {
+        queueOptions.arguments['x-max-priority'] = 10;
+      }
+
+      // Set consumer timeout if specified
+      if (queueDef.consumerTimeout) {
+        queueOptions.arguments['x-consumer-timeout'] = queueDef.consumerTimeout;
+      }
+
+      await channel.assertQueue(queueName, queueOptions);
     }
-
-    // Set up dead-letter exchange routing
-    const dlxExchange = this.getDLXExchangeName(topology.namespace);
-    if (
-      topology.deadLetter.unhandled.enabled ||
-      topology.deadLetter.undeliverable.enabled
-    ) {
-      queueOptions.arguments['x-dead-letter-exchange'] = dlxExchange;
-    }
-
-    // Enable priority if requested
-    if (queueDef.priorities) {
-      queueOptions.arguments['x-max-priority'] = 10;
-    }
-
-    // Set consumer timeout if specified
-    if (queueDef.consumerTimeout) {
-      queueOptions.arguments['x-consumer-timeout'] = queueDef.consumerTimeout;
-    }
-
-    await channel.assertQueue(queueName, queueOptions);
 
     // Bind queue to main exchange
     const mainExchange = this.getMainExchangeName(topology.namespace);
