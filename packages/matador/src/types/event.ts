@@ -1,25 +1,19 @@
+import type { Jsonifiable } from 'type-fest';
+
 /**
  * Unique event routing key type alias.
  */
 export type EventKey = string;
 
 /**
- * JSON-serializable primitive types.
- */
-export type JsonPrimitive = string | number | boolean | null;
-
-/**
- * JSON-serializable value (recursive type for objects and arrays).
- */
-export type JsonValue =
-  | JsonPrimitive
-  | JsonValue[]
-  | { [key: string]: JsonValue };
-
-/**
  * JSON-serializable record type for metadata.
+ * Uses type-fest's Jsonifiable which accepts:
+ * - Primitives (string, number, boolean, null)
+ * - Arrays of Jsonifiable values
+ * - Objects with Jsonifiable values
+ * - Objects with a toJSON() method
  */
-export type JsonRecord = Record<string, JsonValue>;
+export type JsonRecord = Record<string, Jsonifiable>;
 
 /**
  * Static properties required on Event classes for schema registration.

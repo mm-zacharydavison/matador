@@ -478,7 +478,6 @@ Hooks are passed as the second argument to the `Matador` constructor and provide
 | Hook                     | Description                                                                           |
 | ------------------------ | ------------------------------------------------------------------------------------- |
 | `loadUniversalMetadata`  | Loads metadata to add to all envelopes (e.g., correlationId from AsyncLocalStorage)   |
-| `getQueueConcurrency`    | Dynamic queue concurrency lookup                                                      |
 | `getRetryDelay`          | Dynamic retry delay lookup                                                            |
 | `getAttempts`            | Dynamic max attempts lookup                                                           |
 | `getMaxDeliveries`       | Dynamic max deliveries (poison threshold) lookup                                      |
@@ -703,7 +702,6 @@ const matador = new Matador(config, {
 | `[Matador] 🟡 Shutdown timeout reached after Nms, some messages may not...`      | Shutdown timeout in matador-nest                           |
 | `[Matador] 🟡 Hook onWorkerWrap threw an error`                                  | The `onWorkerWrap` hook threw an exception                 |
 | `[Matador] 🟡 Hook loadUniversalMetadata threw an error`                         | The `loadUniversalMetadata` hook threw an exception        |
-| `[Matador] 🟡 Hook getQueueConcurrency threw an error`                           | The `getQueueConcurrency` hook threw an exception          |
 | `[Matador] 🟡 Hook getRetryDelay threw an error`                                 | The `getRetryDelay` hook threw an exception                |
 | `[Matador] 🟡 Hook getAttempts threw an error`                                   | The `getAttempts` hook threw an exception                  |
 | `[Matador] 🟡 Hook getMaxDeliveries threw an error`                              | The `getMaxDeliveries` hook threw an exception             |

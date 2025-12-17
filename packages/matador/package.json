@@ -34,7 +34,8 @@
     "send-test-event": "bun ./cli.ts ./examples/config.ts ./examples/event.ts"
   },
   "dependencies": {
-    "amqplib": "^0.10.4"
+    "amqplib": "^0.10.4",
+    "type-fest": "^5.3.1"
   },
   "devDependencies": {
     "@testcontainers/rabbitmq": "^10.16.0",

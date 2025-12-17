@@ -177,13 +177,6 @@ export interface MatadorHooks {
     | Promise<Record<string, unknown>>;
 
   /**
-   * Dynamic queue concurrency lookup.
-   */
-  getQueueConcurrency?(
-    queueName: string,
-  ): number | undefined | Promise<number | undefined>;
-
-  /**
    * Dynamic retry delay lookup.
    */
   getRetryDelay?(

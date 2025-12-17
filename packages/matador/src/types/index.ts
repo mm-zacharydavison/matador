@@ -24,11 +24,12 @@ export type {
   EventKey,
   EventOptions,
   EventStatic,
-  JsonPrimitive,
   JsonRecord,
-  JsonValue,
 } from './event.js';
 export { MatadorEvent } from './event.js';
+
+// Re-export Jsonifiable from type-fest for convenience
+export type { Jsonifiable } from 'type-fest';
 
 export type {
   AnySubscriber,

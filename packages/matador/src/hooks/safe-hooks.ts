@@ -116,22 +116,6 @@ export class SafeHooks {
     }
   }
 
-  async getQueueConcurrency(queueName: string): Promise<number | undefined> {
-    if (!this.hooks.getQueueConcurrency) {
-      return undefined;
-    }
-
-    try {
-      return await this.hooks.getQueueConcurrency(queueName);
-    } catch (error) {
-      this.logger.warn(
-        '[Matador] 🟡 Hook getQueueConcurrency threw an error',
-        error,
-      );
-      return undefined;
-    }
-  }
-
   async getRetryDelay(
     envelope: Envelope,
     attemptNumber: number,
