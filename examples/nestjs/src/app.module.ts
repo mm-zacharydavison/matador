@@ -13,7 +13,10 @@ import { AnalyticsService, NotificationService } from './services/index.js';
  * import { RabbitMQTransport } from '@zdavison/matador';
  *
  * MatadorModule.forRoot({
- *   transport: new RabbitMQTransport({ url: 'amqp://localhost' }),
+ *   transport: new RabbitMQTransport({
+ *     url: 'amqp://localhost',
+ *     connectionName: 'my-app',
+ *   }),
  *   // ...
  * })
  * ```

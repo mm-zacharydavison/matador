@@ -49,6 +49,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
     beforeEach(async () => {
       transport = new RabbitMQTransport({
         url: connectionUrl,
+        connectionName: 'matador-e2e-test',
         quorumQueues: false, // Use classic queues for faster tests
         defaultPrefetch: 5,
       });
@@ -202,6 +203,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
     it('should handle disconnect and reconnect', async () => {
       const transport = new RabbitMQTransport({
         url: connectionUrl,
+        connectionName: 'matador-reconnect-test',
         connection: {
           maxReconnectAttempts: 3,
           initialReconnectDelay: 100,
@@ -229,6 +231,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
     beforeEach(async () => {
       transport = new RabbitMQTransport({
         url: connectionUrl,
+        connectionName: 'matador-exact-queue-test',
         quorumQueues: false,
         defaultPrefetch: 5,
       });
@@ -515,6 +518,7 @@ describe.skipIf(SKIP_E2E)('RabbitMQ Transport E2E', () => {
     beforeEach(async () => {
       transport = new RabbitMQTransport({
         url: connectionUrl,
+        connectionName: 'matador-isolation-test',
         quorumQueues: false,
         defaultPrefetch: 2,
       });

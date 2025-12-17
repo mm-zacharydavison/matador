@@ -29,6 +29,9 @@ export interface RabbitMQTransportConfig {
   /** RabbitMQ connection URL */
   readonly url: string;
 
+  /** Connection name displayed in RabbitMQ management UI */
+  readonly connectionName: string;
+
   /** Connection manager configuration */
   readonly connection?: Partial<ConnectionManagerConfig> | undefined;
 
@@ -104,7 +107,7 @@ export class RabbitMQTransport implements Transport {
   private readonly config: Required<
     Omit<RabbitMQTransportConfig, 'connection' | 'logger'>
   > & {
-    connection: Partial<ConnectionManagerConfig>;
+    readonly connection: Partial<ConnectionManagerConfig>;
   };
 
   private readonly logger: Logger;
@@ -114,6 +117,7 @@ export class RabbitMQTransport implements Transport {
     this.logger = config.logger ?? consoleLogger;
     this.config = {
       url: config.url,
+      connectionName: config.connectionName,
       connection: config.connection ?? {},
       quorumQueues: config.quorumQueues ?? true,
       defaultPrefetch: config.defaultPrefetch ?? 10,
@@ -445,7 +449,9 @@ export class RabbitMQTransport implements Transport {
     this.logger.info(
       `[Matador] ⏳ Connecting to RabbitMQ at '${redactAmqpUrl(this.config.url)}'.`,
     );
-    const connection = await amqplib.connect(this.config.url);
+    const connection = await amqplib.connect(this.config.url, {
+      clientProperties: { connection_name: this.config.connectionName },
+    });
     this.connection = connection;
 
     // Handle connection errors - let ConnectionManager handle reconnection

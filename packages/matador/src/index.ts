@@ -155,7 +155,6 @@ export type {
   DecodeErrorContext,
   EnqueueErrorContext,
   EnqueueSuccessContext,
-  EnqueueWarningContext,
   Logger,
   MatadorHooks,
   WorkerErrorContext,

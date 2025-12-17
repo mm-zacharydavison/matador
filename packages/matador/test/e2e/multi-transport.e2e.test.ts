@@ -56,6 +56,7 @@ describe.skipIf(SKIP_E2E)('MultiTransport E2E', () => {
 
       rabbitTransport = new RabbitMQTransport({
         url: connectionUrl,
+        connectionName: 'matador-multi-transport-test',
         quorumQueues: false,
       });
 

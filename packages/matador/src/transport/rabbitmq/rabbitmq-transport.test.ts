@@ -66,6 +66,7 @@ describe('RabbitMQTransport', () => {
 
       const transport = new RabbitMQTransport({
         url: 'amqp://testuser:testpass@localhost:5672',
+        connectionName: 'test-connection',
         logger: mockLogger,
         connection: {
           maxReconnectAttempts: 1, // Only try once to avoid long retries
@@ -97,6 +98,7 @@ describe('RabbitMQTransport', () => {
 
       const transport = new RabbitMQTransport({
         url: 'amqp://localhost:5672',
+        connectionName: 'test-connection',
         logger: mockLogger,
         connection: {
           maxReconnectAttempts: 1,

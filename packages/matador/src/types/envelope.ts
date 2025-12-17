@@ -1,4 +1,5 @@
 import type { Importance } from './common.js';
+import type { Event, EventStatic } from './event.js';
 
 /**
  * Message envelope containing the event data and routing/observability metadata.
@@ -152,21 +153,92 @@ export function createEnvelope<T>(
 }
 
 /**
- * Helper to create a test envelope for a given event instance.
+ * Options for creating a dummy envelope.
+ * All fields are optional and will use sensible defaults if not provided.
+ */
+export interface CreateDummyEnvelopeOptions {
+  readonly id?: string | undefined;
+  readonly eventKey?: string | undefined;
+  readonly eventDescription?: string | undefined;
+  readonly targetSubscriber?: string | undefined;
+  readonly importance?: Importance | undefined;
+  readonly correlationId?: string | undefined;
+  readonly metadata?: Record<string, unknown> | undefined;
+  readonly delayMs?: number | undefined;
+}
+
+/**
+ * Type helper to extract the data type from an Event, or return T as-is.
+ */
+type ExtractData<T> = T extends Event<infer D> ? D : T;
+
+/**
+ * Checks if a value is a Matador Event (has data property and constructor with key).
+ */
+function isEvent<T>(value: unknown): value is Event<T> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'data' in value &&
+    typeof (value.constructor as EventStatic).key === 'string'
+  );
+}
+
+/**
+ * Helper to create a test envelope for a given event instance or raw data.
  * Useful for unit testing subscriber callbacks directly.
  *
- * @example
+ * When passing an Event instance, the eventKey and eventDescription will be
+ * automatically extracted from the event class (unless overridden in options).
+ *
+ * @example With raw data
+ * ```typescript
+ * const envelope = createDummyEnvelope({ userId: '123', email: 'test@example.com' });
+ * ```
+ *
+ * @example With an Event instance
  * ```typescript
  * const event = new UserCreatedEvent({ userId: '123', email: 'test@example.com' });
  * const envelope = createDummyEnvelope(event);
- * await mySubscriber.callback(envelope, event);
+ * // eventKey is automatically set to UserCreatedEvent.key
+ * await mySubscriber.callback(envelope, event.data);
+ * ```
+ *
+ * @example With options
+ * ```typescript
+ * const event = new UserCreatedEvent({ userId: '123', email: 'test@example.com' });
+ * const envelope = createDummyEnvelope(event, {
+ *   metadata: { traceId: 'abc-123' },
+ *   correlationId: 'request-456',
+ * });
  * ```
  */
-export function createDummyEnvelope<T>(data: T): Envelope<T> {
+export function createDummyEnvelope<T>(
+  dataOrEvent: T,
+  options?: CreateDummyEnvelopeOptions,
+): Envelope<ExtractData<T>> {
+  let data: ExtractData<T>;
+  let eventKey = options?.eventKey ?? 'dummy.event.key';
+  let eventDescription = options?.eventDescription;
+
+  if (isEvent(dataOrEvent)) {
+    data = dataOrEvent.data as ExtractData<T>;
+    const eventStatic = dataOrEvent.constructor as EventStatic;
+    eventKey = options?.eventKey ?? eventStatic.key;
+    eventDescription = options?.eventDescription ?? eventStatic.description;
+  } else {
+    data = dataOrEvent as ExtractData<T>;
+  }
+
   return createEnvelope({
     data,
-    eventKey: 'dummy.event.key',
-    targetSubscriber: 'dummy-subscriber',
-    importance: 'can-ignore',
+    eventKey,
+    eventDescription,
+    targetSubscriber: options?.targetSubscriber ?? 'dummy-subscriber',
+    importance: options?.importance ?? 'can-ignore',
+    id: options?.id,
+    correlationId: options?.correlationId,
+    metadata: options?.metadata,
+    delayMs: options?.delayMs,
   });
 }

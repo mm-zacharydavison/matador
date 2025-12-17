@@ -116,6 +116,7 @@ const transportFactories: TransportFactory[] = [
       }
       return new RabbitMQTransport({
         url: rabbitConnectionUrl,
+        connectionName: 'matador-compliance-test',
         quorumQueues: false, // Use classic queues for faster tests
         defaultPrefetch: 10,
       });

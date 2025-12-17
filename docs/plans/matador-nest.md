@@ -155,7 +155,10 @@ import { RabbitMQTransport, TopologyBuilder } from '@zdavison/matador';
 @Module({
   imports: [
     MatadorModule.forRoot({
-      transport: new RabbitMQTransport({ url: 'amqp://localhost' }),
+      transport: new RabbitMQTransport({
+        url: 'amqp://localhost',
+        connectionName: 'myapp',
+      }),
       topology: TopologyBuilder.create()
         .withNamespace('myapp')
         .addQueue('events', { concurrency: 10 })
@@ -188,6 +191,7 @@ import { RabbitMQTransport, TopologyBuilder } from '@zdavison/matador';
       useFactory: (config: ConfigService) => ({
         transport: new RabbitMQTransport({
           url: config.get('RABBITMQ_URL'),
+          connectionName: config.get('APP_NAME'),
         }),
         topology: TopologyBuilder.create()
           .withNamespace(config.get('APP_NAME'))

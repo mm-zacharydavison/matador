@@ -39,16 +39,6 @@ export interface EnqueueSuccessContext {
 }
 
 /**
- * Context for enqueue warning hook (fallback used).
- */
-export interface EnqueueWarningContext {
-  readonly envelope: Envelope;
-  readonly originalQueue: string;
-  readonly fallbackQueue: string;
-  readonly error: Error;
-}
-
-/**
  * Context for transport fallback hook.
  */
 export interface TransportFallbackContext {
@@ -129,11 +119,6 @@ export interface MatadorHooks {
    * Called when an event is successfully enqueued.
    */
   onEnqueueSuccess?(context: EnqueueSuccessContext): void | Promise<void>;
-
-  /**
-   * Called when enqueue falls back to a secondary queue.
-   */
-  onEnqueueWarning?(context: EnqueueWarningContext): void | Promise<void>;
 
   /**
    * Called when transport fallback occurs during send.

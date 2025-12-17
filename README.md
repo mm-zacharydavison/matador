@@ -210,7 +210,10 @@ const topology = TopologyBuilder.create()
   .build();
 
 // Create transport
-const transport = new RabbitMQTransport({ url: 'amqp://localhost' });
+const transport = new RabbitMQTransport({
+  url: 'amqp://localhost',
+  connectionName: 'my-app',
+});
 
 // Create Matador instance
 const matador = new Matador({
@@ -461,7 +464,6 @@ Hooks are passed as the second argument to the `Matador` constructor and provide
 | ------------------------ | ------------------------------------------------------------------------------------- |
 | `logger`                 | Logger instance for internal Matador logging (defaults to console)                    |
 | `onEnqueueSuccess`       | Called when an event is successfully enqueued                                         |
-| `onEnqueueWarning`       | Called when enqueue falls back to a secondary queue                                   |
 | `onTransportFallback`    | Called when transport fallback occurs (MultiTransport with fallbackEnabled)           |
 | `onEnqueueError`         | Called when enqueue fails completely                                                  |
 | `onWorkerWrap`           | Wraps entire worker processing (for APM context like DataDog, NewRelic)               |
@@ -849,7 +851,10 @@ You can combine this with `LocalTransport` to make messages that fail to enqueue
 ```ts
 import { MultiTransport, RabbitMQTransport, LocalTransport } from '@zdavison/matador';
 
-const rabbitTransport = new RabbitMQTransport({ url: 'amqp://localhost' });
+const rabbitTransport = new RabbitMQTransport({
+  url: 'amqp://localhost',
+  connectionName: 'my-app',
+});
 const localTransport = new LocalTransport();
 
 const transport = new MultiTransport(

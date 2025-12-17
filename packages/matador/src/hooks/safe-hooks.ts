@@ -10,7 +10,6 @@ import {
   type DecodeErrorContext,
   type EnqueueErrorContext,
   type EnqueueSuccessContext,
-  type EnqueueWarningContext,
   type Logger,
   type MatadorHooks,
   type WorkerErrorContext,
@@ -37,12 +36,6 @@ export class SafeHooks {
   async onEnqueueSuccess(context: EnqueueSuccessContext): Promise<void> {
     await this.safeCall('onEnqueueSuccess', () =>
       this.hooks.onEnqueueSuccess?.(context),
-    );
-  }
-
-  async onEnqueueWarning(context: EnqueueWarningContext): Promise<void> {
-    await this.safeCall('onEnqueueWarning', () =>
-      this.hooks.onEnqueueWarning?.(context),
     );
   }
 
