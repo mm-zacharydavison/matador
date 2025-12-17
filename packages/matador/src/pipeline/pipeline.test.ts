@@ -542,6 +542,44 @@ describe('ProcessingPipeline', () => {
       });
     });
 
+    it('should pass subscriber return value to onWorkerSuccess', async () => {
+      const envelope = createTestEnvelope();
+      const subscriberDef = createSubscriberDefinition();
+      const onWorkerSuccessMock = mock(async () => {});
+      const returnValue = { processed: true, count: 42 };
+
+      const config = createMockConfig({
+        codec: {
+          decode: mock(() => envelope),
+        },
+        schema: {
+          getSubscriberDefinition: mock(() => subscriberDef),
+          getExecutableSubscriber: mock(() => ({
+            name: 'test-subscriber',
+            description: 'Test subscriber',
+            idempotent: 'unknown' as const,
+            callback: mock(async () => returnValue),
+          })),
+        },
+        hooks: {
+          onWorkerSuccess: onWorkerSuccessMock,
+        },
+      });
+
+      const pipeline = new ProcessingPipeline(config);
+      const receipt = createReceipt();
+
+      await pipeline.process(new Uint8Array(), receipt);
+
+      expect(onWorkerSuccessMock).toHaveBeenCalledWith({
+        envelope,
+        subscriber: subscriberDef,
+        result: returnValue,
+        durationMs: expect.any(Number),
+        transport: 'mock',
+      });
+    });
+
     it('should call onWorkerError after failed callback', async () => {
       const envelope = createTestEnvelope();
       const subscriberDef = createSubscriberDefinition();

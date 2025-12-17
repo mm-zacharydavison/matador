@@ -1,3 +1,6 @@
+import assert from 'node:assert';
+import type { Envelope } from '../types/envelope.js';
+
 /**
  * Base class for retry control errors.
  * These errors control the retry behavior of message processing.
@@ -76,24 +79,37 @@ export class DontRetry extends RetryControlError {
 }
 
 /**
- * Assertion error that should never be retried.
- * Use for programming errors and invariant violations.
+ * Thrown by `assertEvent` in the event of a failed assertion.
  *
- * ACTION: Review the assertion failure message to identify the bug
- * in the event payload or subscriber logic.
+ * This error indicates that an event was in an unexpected state when it reached the subscriber.
+ * Throwing this error will indicate to Matador NOT to retry the event - it will be sent
+ * directly to the undeliverable dead-letter queue.
+ *
+ * Use `assertEvent` in your subscribers to assert properties about an event payload.
+ * This is useful in scenarios where you would expect an event payload to contain a field
+ * based on the types, but something unexpected caused it to not be present.
+ *
+ * @see assertEvent
  */
 export class EventAssertionError extends Error {
   declare readonly name: string;
 
   readonly description =
-    'An event assertion failed, indicating a programming error or invariant violation. ' +
-    'ACTION: Review the assertion failure message to identify the bug in the ' +
-    'event payload or subscriber logic. These errors are never retried and go ' +
-    'directly to the dead-letter queue.';
+    'Thrown to indicate that an event was in an unexpected state when it reached the subscriber. ' +
+    'Throwing this error will indicate to Matador NOT to retry the event. ' +
+    'Matador does not throw this error directly - it is thrown by assertEvent, which you can ' +
+    'use in your subscribers to assert properties about an event. ' +
+    'This can be useful in scenarios where you would expect an event payload to contain a field ' +
+    'based on the types, but something unexpected caused it to not be present. ' +
+    'Using this instead of the NodeJS assert allows Matador to not retry the event subscriber.';
 
-  constructor(message: string) {
+  /** The envelope that failed the assertion */
+  readonly envelope: Envelope<unknown>;
+
+  constructor(envelope: Envelope<unknown>, message: string) {
     super(message);
     this.name = 'EventAssertionError';
+    this.envelope = envelope;
     Object.defineProperty(this, 'name', {
       value: 'EventAssertionError',
       enumerable: true,
@@ -107,6 +123,7 @@ export class EventAssertionError extends Error {
       name: this.name,
       message: this.message,
       description: this.description,
+      envelope: this.envelope,
       stack: this.stack,
     };
   }
@@ -131,4 +148,41 @@ export function isDontRetry(error: unknown): error is DontRetry {
  */
 export function isAssertionError(error: unknown): error is EventAssertionError {
   return error instanceof EventAssertionError;
+}
+
+/**
+ * Same as Node.js `assert`, but throws an `EventAssertionError` if the assertion fails.
+ *
+ * `EventAssertionError`s thrown within a subscriber do not cause the subscriber to be retried.
+ * The event will be delivered to the undeliverable dead-letter queue instead.
+ *
+ * @see https://nodejs.org/api/assert.html#assertvalue-message
+ * @param envelope - The envelope this assertion relates to.
+ * @param value - The value to assert. If falsy, the assertion fails.
+ * @param message - The message to include in the error if the assertion fails.
+ * @throws {EventAssertionError} If the assertion fails.
+ *
+ * @example
+ * ```typescript
+ * const subscriber = createSubscriber<MyEvent>({
+ *   name: 'my-subscriber',
+ *   description: 'Processes MyEvent',
+ *   callback: async (envelope) => {
+ *     // Assert that userId exists - if not, event goes to DLQ without retry
+ *     assertEvent(envelope, envelope.data.userId, 'userId is required');
+ *     // ... rest of processing
+ *   },
+ * });
+ * ```
+ */
+export function assertEvent(
+  envelope: Envelope<unknown>,
+  value: unknown,
+  message: string,
+): asserts value {
+  try {
+    assert(value, message);
+  } catch {
+    throw new EventAssertionError(envelope, message);
+  }
 }

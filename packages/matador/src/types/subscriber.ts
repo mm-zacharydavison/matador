@@ -28,11 +28,14 @@ export type EnvelopeOf<T extends MatadorEvent> = Envelope<T['data']>;
  * Callback function executed when an event is received (standard subscribers).
  * Receives the full envelope containing id, data, and docket, plus a context
  * with access to the matador instance for sending additional events.
+ *
+ * The callback may optionally return a value, which will be included in the
+ * onWorkerSuccess hook context for logging or observability purposes.
  */
 export type StandardCallback<T = unknown> = (
   envelope: Envelope<T>,
   context: CallbackContext,
-) => Promise<void> | void;
+) => Promise<unknown> | unknown | void;
 
 /**
  * Context for resumable subscriber callbacks.
@@ -44,11 +47,14 @@ export type ResumableCallbackContext = SubscriberContext & CallbackContext;
  * Callback function for resumable subscribers.
  * Receives the envelope and a context with io() for checkpointed operations
  * and matador for sending additional events.
+ *
+ * The callback may optionally return a value, which will be included in the
+ * onWorkerSuccess hook context for logging or observability purposes.
  */
 export type ResumableCallback<T = unknown> = (
   envelope: Envelope<T>,
   context: ResumableCallbackContext,
-) => Promise<void> | void;
+) => Promise<unknown> | unknown | void;
 
 /**
  * Callback function executed when an event is received.

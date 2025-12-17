@@ -14,7 +14,15 @@ describe('StandardRetryPolicy', () => {
   describe('shouldRetry', () => {
     it('should dead-letter on EventAssertionError', () => {
       const policy = new StandardRetryPolicy();
-      const context = createContext(new EventAssertionError('Invalid event'));
+      const envelope = createEnvelope({
+        eventKey: 'test.event',
+        targetSubscriber: 'test-subscriber',
+        data: { test: 'data' },
+        importance: 'should-investigate',
+      });
+      const context = createContext(
+        new EventAssertionError(envelope, 'Invalid event'),
+      );
 
       const decision = policy.shouldRetry(context);
 

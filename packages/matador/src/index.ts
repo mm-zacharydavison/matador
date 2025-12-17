@@ -171,6 +171,7 @@ export { ProcessingPipeline } from './pipeline/index.js';
 export type { HasDescription } from './errors/index.js';
 export {
   // Retry control errors
+  assertEvent,
   DontRetry,
   DoRetry,
   EventAssertionError,
