@@ -199,12 +199,23 @@ export class Matador {
     }
 
     // Connect transport
+    this.hooks.logger.info(
+      `[Matador] ⏳ Starting backend '${this.transport.name}'...`,
+    );
     await this.transport.connect();
+    this.hooks.logger.info(
+      `[Matador] 🟢 Backend '${this.transport.name}' started.`,
+    );
 
     // Apply topology
     await this.transport.applyTopology(this.topology);
 
     // Subscribe to queues
+    if (this.consumeFrom.length > 0) {
+      this.hooks.logger.info(
+        `[Matador] 🟢 Worker subscribing to '${this.consumeFrom.join(',')}'.`,
+      );
+    }
     for (const queueName of this.consumeFrom) {
       const qualifiedName = getQualifiedQueueName(
         this.topology.namespace,

@@ -83,9 +83,9 @@ export interface NestMatadorOptions {
    * Global subscriber options applied to all discovered subscribers.
    */
   readonly globalSubscriberDefaults?:
-    | Pick<BaseSubscriberOptions, 'importance'> & {
+    | (Pick<BaseSubscriberOptions, 'importance'> & {
         readonly idempotent?: Idempotency | undefined;
-      }
+      })
     | undefined;
 }
 

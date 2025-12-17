@@ -63,6 +63,18 @@ interface ActiveConsumer {
 }
 
 /**
+ * Redacts credentials from an AMQP URL.
+ * Replaces username and password with '****' regardless of their length.
+ *
+ * @example
+ * redactAmqpUrl('amqp://user:pass@host:5672') // 'amqp://****:****@host:5672'
+ */
+export function redactAmqpUrl(url: string): string {
+  const regex = /^(amqps?:\/\/)[^:]+:[^@]+@/;
+  return url.replace(regex, '$1****:****@');
+}
+
+/**
  * RabbitMQ transport implementation using amqplib.
  */
 export class RabbitMQTransport implements Transport {
@@ -430,6 +442,9 @@ export class RabbitMQTransport implements Transport {
   }
 
   private async doConnect(): Promise<void> {
+    this.logger.info(
+      `[Matador] ⏳ Connecting to RabbitMQ at '${redactAmqpUrl(this.config.url)}'.`,
+    );
     const connection = await amqplib.connect(this.config.url);
     this.connection = connection;
 

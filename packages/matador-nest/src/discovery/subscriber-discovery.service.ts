@@ -1,5 +1,5 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
-import { DiscoveryService } from '@nestjs/core';
+import type { DiscoveryService } from '@nestjs/core';
 import {
   type AnySubscriber,
   type Envelope,

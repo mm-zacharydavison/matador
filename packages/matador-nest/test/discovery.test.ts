@@ -52,12 +52,11 @@ describe('SubscriberDiscoveryService', () => {
 
     const instance = new TestService();
 
-    mockNestDiscovery.getProviders = () =>
-      [
-        {
-          instance,
-        },
-      ] ;
+    mockNestDiscovery.getProviders = () => [
+      {
+        instance,
+      },
+    ];
 
     discoveryService = new SubscriberDiscoveryService(
       mockNestDiscovery as unknown as DiscoveryService,
@@ -95,12 +94,11 @@ describe('SubscriberDiscoveryService', () => {
 
     const instance = new TestService();
 
-    mockNestDiscovery.getProviders = () =>
-      [
-        {
-          instance,
-        },
-      ] ;
+    mockNestDiscovery.getProviders = () => [
+      {
+        instance,
+      },
+    ];
 
     discoveryService = new SubscriberDiscoveryService(
       mockNestDiscovery as unknown as DiscoveryService,
@@ -138,8 +136,10 @@ describe('SubscriberDiscoveryService', () => {
     const instanceA = new ServiceA();
     const instanceB = new ServiceB();
 
-    mockNestDiscovery.getProviders = () =>
-      [{ instance: instanceA }, { instance: instanceB }] ;
+    mockNestDiscovery.getProviders = () => [
+      { instance: instanceA },
+      { instance: instanceB },
+    ];
 
     discoveryService = new SubscriberDiscoveryService(
       mockNestDiscovery as unknown as DiscoveryService,
@@ -174,12 +174,11 @@ describe('SubscriberDiscoveryService', () => {
 
     const instance = new TestService();
 
-    mockNestDiscovery.getProviders = () =>
-      [
-        {
-          instance,
-        },
-      ] ;
+    mockNestDiscovery.getProviders = () => [
+      {
+        instance,
+      },
+    ];
 
     discoveryService = new SubscriberDiscoveryService(
       mockNestDiscovery as unknown as DiscoveryService,
@@ -202,12 +201,11 @@ describe('SubscriberDiscoveryService', () => {
 
     const instance = new PlainService();
 
-    mockNestDiscovery.getProviders = () =>
-      [
-        {
-          instance,
-        },
-      ] ;
+    mockNestDiscovery.getProviders = () => [
+      {
+        instance,
+      },
+    ];
 
     discoveryService = new SubscriberDiscoveryService(
       mockNestDiscovery as unknown as DiscoveryService,
@@ -231,12 +229,11 @@ describe('SubscriberDiscoveryService', () => {
 
     const instance = new TestService();
 
-    mockNestDiscovery.getProviders = () =>
-      [
-        {
-          instance,
-        },
-      ] ;
+    mockNestDiscovery.getProviders = () => [
+      {
+        instance,
+      },
+    ];
 
     discoveryService = new SubscriberDiscoveryService(
       mockNestDiscovery as unknown as DiscoveryService,
@@ -254,10 +251,9 @@ describe('SubscriberDiscoveryService', () => {
     };
 
     const additionalEvents = new Map<EventClass<unknown>, AnySubscriber[]>();
-    additionalEvents.set(
-      OrderPlacedEvent as EventClass<unknown>,
-      [additionalSubscriber],
-    );
+    additionalEvents.set(OrderPlacedEvent as EventClass<unknown>, [
+      additionalSubscriber,
+    ]);
 
     const mergedSchema = discoveryService.getMergedSchema({
       transport: {} as never,
