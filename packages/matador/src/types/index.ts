@@ -10,7 +10,7 @@ export { invalidResult, validResult } from './common.js';
 export type { Dispatcher } from './dispatcher.js';
 
 export type { CreateEnvelopeOptions, Docket, Envelope } from './envelope.js';
-export { createEnvelope } from './envelope.js';
+export { createDummyEnvelope, createEnvelope } from './envelope.js';
 
 export type {
   Event,

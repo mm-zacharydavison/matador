@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { createEnvelope } from '../types/envelope.js';
 import {
   assertEvent,
   DontRetry,
@@ -8,6 +9,15 @@ import {
   isDontRetry,
   isDoRetry,
 } from './retry-errors.js';
+
+function createTestEnvelope(data: unknown = { foo: 'bar' }) {
+  return createEnvelope({
+    data,
+    eventKey: 'test.event',
+    targetSubscriber: 'test-subscriber',
+    importance: 'can-ignore',
+  });
+}
 
 describe('retry-errors', () => {
   describe('DoRetry', () => {
@@ -52,26 +62,26 @@ describe('retry-errors', () => {
 
   describe('EventAssertionError', () => {
     it('should have correct name', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
       const error = new EventAssertionError(envelope, 'assertion failed');
       expect(error.name).toBe('EventAssertionError');
     });
 
     it('should store the envelope', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
       const error = new EventAssertionError(envelope, 'assertion failed');
       expect(error.envelope).toBe(envelope);
     });
 
     it('should have description', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
       const error = new EventAssertionError(envelope, 'assertion failed');
       expect(error.description).toBeDefined();
       expect(error.description).toContain('NOT to retry');
     });
 
     it('should serialize to JSON with envelope', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
       const error = new EventAssertionError(envelope, 'assertion failed');
       const json = error.toJSON();
       expect(json.name).toBe('EventAssertionError');
@@ -83,7 +93,7 @@ describe('retry-errors', () => {
 
   describe('assertEvent', () => {
     it('should not throw when value is truthy', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
       expect(() => assertEvent(envelope, true, 'should be true')).not.toThrow();
       expect(() =>
         assertEvent(envelope, 'string', 'should be string'),
@@ -94,7 +104,7 @@ describe('retry-errors', () => {
     });
 
     it('should throw EventAssertionError when value is falsy', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
 
       expect(() => assertEvent(envelope, false, 'value was false')).toThrow(
         EventAssertionError,
@@ -114,7 +124,7 @@ describe('retry-errors', () => {
     });
 
     it('should include envelope in thrown error', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
       try {
         assertEvent(envelope, false, 'assertion failed');
         expect.unreachable('should have thrown');
@@ -126,7 +136,7 @@ describe('retry-errors', () => {
     });
 
     it('should include message in thrown error', () => {
-      const envelope = { id: 'test-id', data: { foo: 'bar' } };
+      const envelope = createTestEnvelope();
       try {
         assertEvent(envelope, null, 'userId is required');
         expect.unreachable('should have thrown');
@@ -153,7 +163,7 @@ describe('retry-errors', () => {
     });
 
     it('isAssertionError should identify EventAssertionError', () => {
-      const envelope = { id: 'test-id' };
+      const envelope = createTestEnvelope();
       expect(isAssertionError(new EventAssertionError(envelope, 'test'))).toBe(
         true,
       );

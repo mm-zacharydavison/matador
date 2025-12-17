@@ -48,6 +48,7 @@ export type {
 } from './types/index.js';
 export {
   MatadorEvent,
+  createDummyEnvelope,
   createEnvelope,
   createSubscriber,
   createSubscriberStub,

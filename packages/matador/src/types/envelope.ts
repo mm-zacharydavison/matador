@@ -150,3 +150,26 @@ export function createEnvelope<T>(
     },
   };
 }
+
+/**
+ * Helper to create a test envelope for a given event instance.
+ * Useful for unit testing subscriber callbacks directly.
+ *
+ * @example
+ * ```typescript
+ * const event = new UserCreatedEvent({ userId: '123', email: 'test@example.com' });
+ * const envelope = createDummyEnvelope(event);
+ * await mySubscriber.callback(envelope, event);
+ * ```
+ */
+export function createDummyEnvelope<T>(event: {
+  data: T;
+  constructor: { key: string };
+}): Envelope<T> {
+  return createEnvelope({
+    data: event.data,
+    eventKey: event.constructor.key,
+    targetSubscriber: 'dummy-subscriber',
+    importance: 'can-ignore',
+  });
+}
