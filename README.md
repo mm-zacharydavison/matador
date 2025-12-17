@@ -679,32 +679,42 @@ const matador = new Matador(config, {
 
 **Debug:**
 
-| Message                                               | Context                                            |
-| ----------------------------------------------------- | -------------------------------------------------- |
-| `[Matador] 🔌 Delayed message exchange plugin detected` | RabbitMQ delayed message plugin is available       |
+| Message                                                   | Context                                        |
+| --------------------------------------------------------- | ---------------------------------------------- |
+| `[Matador] 🔌 Delayed message exchange plugin detected`   | RabbitMQ delayed message plugin is available   |
+
+**Info:**
+
+| Message                                                                       | Context                                            |
+| ----------------------------------------------------------------------------- | -------------------------------------------------- |
+| `[Matador] 🟢 matador-nest initialized.`                                      | MatadorService initialized (matador-nest)          |
+| `[Matador] 🟢 Started`                                                        | Matador started consuming (matador-nest)           |
+| `[Matador] ⏳ Graceful shutdown initiated, draining in-flight messages`       | Shutdown started, waiting for messages to complete |
+| `[Matador] 🟢 Shutdown complete`                                              | Matador shutdown finished (matador-nest)           |
 
 **Warn:**
 
-| Message                                                                   | Context                                                    |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `[Matador] 🟡 RabbitMQ delayed message exchange plugin not available...`  | RabbitMQ plugin not installed, delayed messages disabled   |
-| `[Matador] ⚠️ Shutdown timeout reached with N events still processing`    | Graceful shutdown timed out with pending events            |
-| `[Matador] 🟡 Hook onWorkerWrap threw an error`                           | The `onWorkerWrap` hook threw an exception                 |
-| `[Matador] 🟡 Hook loadUniversalMetadata threw an error`                  | The `loadUniversalMetadata` hook threw an exception        |
-| `[Matador] 🟡 Hook getQueueConcurrency threw an error`                    | The `getQueueConcurrency` hook threw an exception          |
-| `[Matador] 🟡 Hook getRetryDelay threw an error`                          | The `getRetryDelay` hook threw an exception                |
-| `[Matador] 🟡 Hook getAttempts threw an error`                            | The `getAttempts` hook threw an exception                  |
-| `[Matador] 🟡 Hook getMaxDeliveries threw an error`                       | The `getMaxDeliveries` hook threw an exception             |
-| `[Matador] 🟡 Hook {hookName} threw an error`                             | Any other lifecycle hook threw an exception                |
+| Message                                                                          | Context                                                    |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `[Matador] 🟡 RabbitMQ delayed message exchange plugin not available...`         | RabbitMQ plugin not installed, delayed messages disabled   |
+| `[Matador] 🟡 Shutdown timeout reached with N events still processing`           | Graceful shutdown timed out with pending events            |
+| `[Matador] 🟡 Shutdown timeout reached after Nms, some messages may not...`      | Shutdown timeout in matador-nest                           |
+| `[Matador] 🟡 Hook onWorkerWrap threw an error`                                  | The `onWorkerWrap` hook threw an exception                 |
+| `[Matador] 🟡 Hook loadUniversalMetadata threw an error`                         | The `loadUniversalMetadata` hook threw an exception        |
+| `[Matador] 🟡 Hook getQueueConcurrency threw an error`                           | The `getQueueConcurrency` hook threw an exception          |
+| `[Matador] 🟡 Hook getRetryDelay threw an error`                                 | The `getRetryDelay` hook threw an exception                |
+| `[Matador] 🟡 Hook getAttempts threw an error`                                   | The `getAttempts` hook threw an exception                  |
+| `[Matador] 🟡 Hook getMaxDeliveries threw an error`                              | The `getMaxDeliveries` hook threw an exception             |
+| `[Matador] 🟡 Hook {hookName} threw an error`                                    | Any other lifecycle hook threw an exception                |
 
 **Error:**
 
-| Message                                               | Context                                                     |
-| ----------------------------------------------------- | ----------------------------------------------------------- |
-| `[Matador] 🔴 RabbitMQ connection error`              | RabbitMQ connection encountered an error                    |
-| `[Matador] 🔴 RabbitMQ publish channel error`         | RabbitMQ publish channel encountered an error               |
-| `[Matador] 🔴 Handler error in message processing`    | Subscriber callback threw an unhandled exception            |
-| `[Matador] 🔴 Failed to enqueue delayed message`      | LocalTransport failed to enqueue a delayed message          |
+| Message                                                                          | Context                                                    |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `[Matador] 🔴 RabbitMQ connection error`                                         | RabbitMQ connection encountered an error                   |
+| `[Matador] 🔴 RabbitMQ publish channel error`                                    | RabbitMQ publish channel encountered an error              |
+| `[Matador] 🔴 Handler error in message processing`                               | Subscriber callback threw an unhandled exception           |
+| `[Matador] 🔴 Failed to enqueue delayed message`                                 | LocalTransport failed to enqueue a delayed message         |
 
 For application-level logging (event processing, success/failure tracking), use the lifecycle hooks (`onWorkerSuccess`, `onWorkerError`, `onEnqueueSuccess`, etc.).
 
