@@ -630,7 +630,6 @@ describe('FanoutEngine', () => {
     it('should work with subscriber stubs', async () => {
       const stub = createSubscriberStub({
         name: 'remote-subscriber',
-        description: 'Remote subscriber stub',
         enabled: () => false,
       });
 

@@ -120,9 +120,12 @@ export class SchemaRegistry {
 
     const def: SubscriberDefinition = {
       name: subscriber.name,
-      description: subscriber.description,
       idempotent: subscriber.idempotent ?? 'unknown',
       importance: subscriber.importance ?? 'should-investigate',
+      ...('description' in subscriber &&
+        subscriber.description !== undefined && {
+          description: subscriber.description,
+        }),
     };
 
     if (subscriber.targetQueue !== undefined) {

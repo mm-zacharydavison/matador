@@ -225,7 +225,6 @@ describe('installPlugins', () => {
     });
     const stubSub = createSubscriberStub({
       name: 'remote-analytics',
-      description: 'Remote analytics stub',
       targetQueue: 'analytics-worker',
     });
 

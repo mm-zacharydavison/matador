@@ -133,7 +133,8 @@ export type Subscriber<T extends MatadorEvent> =
  * is in a remote service. Declares the subscriber contract without providing
  * the callback.
  */
-export interface SubscriberStub extends StandardSubscriberOptions {
+export interface SubscriberStub
+  extends Omit<StandardSubscriberOptions, 'description'> {
   /** Human-readable name for the subscriber */
   readonly name: string;
 
@@ -282,7 +283,6 @@ export function createSubscriber<T extends MatadorEvent>(
  */
 export interface CreateSubscriberStubInput {
   readonly name: string;
-  readonly description: string;
   readonly idempotent?: 'yes' | 'no' | 'unknown' | undefined;
   readonly importance?: Importance | undefined;
   readonly targetQueue?: string | undefined;
@@ -296,7 +296,6 @@ export interface CreateSubscriberStubInput {
  * ```typescript
  * const stub = createSubscriberStub({
  *   name: 'remote-analytics',
- *   description: 'Sends events to remote analytics service',
  *   targetQueue: 'analytics-worker',
  * });
  * ```
@@ -306,7 +305,6 @@ export function createSubscriberStub(
 ): SubscriberStub {
   return {
     name: input.name,
-    description: input.description,
     isStub: true,
     idempotent: input.idempotent ?? 'unknown',
     importance: input.importance ?? 'should-investigate',
@@ -322,7 +320,7 @@ export function createSubscriberStub(
  */
 export interface SubscriberDefinition {
   readonly name: string;
-  readonly description: string;
+  readonly description?: string | undefined;
   readonly idempotent: Idempotency;
   readonly importance: Importance;
   readonly targetQueue?: string | undefined;
