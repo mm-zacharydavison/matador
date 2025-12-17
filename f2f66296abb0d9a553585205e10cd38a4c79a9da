@@ -1,0 +1,27 @@
+packages/matador/src/core/shutdown.ts
+  d97655650a4fd66c 153
+packages/matador-nest/src/services/matador.service.ts
+  d97655650a4fd66c 258,267,276,281
+packages/matador/src/transport/local/local-transport.ts
+  d97655650a4fd66c 188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "f2f66296abb0d9a553585205e10cd38a4c79a9da",
+  "prompts": {
+    "d97655650a4fd66c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "182f0548-7314-4efb-9279-d07977e29f49",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 8,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}
