@@ -1012,3 +1012,6 @@ Thank you to the following MeetsMore engineers who worked on our internal V1 ver
 Matador V2 would not exist without your contributions.
 
 - https://github.com/GuillaumeDeconinck
+- https://github.com/mm-derek
+- https://github.com/colachg
+- https://github.com/richardmarchant
