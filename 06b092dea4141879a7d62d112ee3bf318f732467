@@ -1,0 +1,23 @@
+README.md
+  d97655650a4fd66c 683-693,698,700-701,713
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "06b092dea4141879a7d62d112ee3bf318f732467",
+  "prompts": {
+    "d97655650a4fd66c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "182f0548-7314-4efb-9279-d07977e29f49",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 31,
+      "total_deletions": 21,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    }
+  }
+}
