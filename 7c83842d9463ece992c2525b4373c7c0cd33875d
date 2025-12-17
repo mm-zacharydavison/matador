@@ -1,0 +1,35 @@
+packages/matador/src/types/subscriber.ts
+  e93df4a47a108345 31-33,38,50-52,57
+packages/matador/src/errors/retry-errors.ts
+  e93df4a47a108345 1,3,82,84-86,88-92,98-104,106,112,126,152-178,180-188
+packages/matador/src/errors/index.ts
+  e93df4a47a108345 5
+packages/matador/src/errors/retry-errors.test.ts
+  e93df4a47a108345 1-165
+packages/matador/src/index.ts
+  e93df4a47a108345 174
+packages/matador/src/retry/standard-policy.test.ts
+  e93df4a47a108345 17-24
+packages/matador/src/pipeline/pipeline.test.ts
+  e93df4a47a108345 545-582
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "7c83842d9463ece992c2525b4373c7c0cd33875d",
+  "prompts": {
+    "e93df4a47a108345": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0ea9fb7b-781b-4efd-9dbc-a50a4d1417de",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 286,
+      "total_deletions": 14,
+      "accepted_lines": 279,
+      "overriden_lines": 1
+    }
+  }
+}
