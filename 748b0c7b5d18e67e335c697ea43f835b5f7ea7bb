@@ -1,0 +1,25 @@
+packages/matador/src/types/event.ts
+  ff5090a8d66dc463 1-2,10-14,16
+packages/matador/src/types/index.ts
+  ff5090a8d66dc463 31-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "748b0c7b5d18e67e335c697ea43f835b5f7ea7bb",
+  "prompts": {
+    "ff5090a8d66dc463": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d35e21d0-4b0f-4e3a-99e3-67acf7defcea",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 264,
+      "total_deletions": 84,
+      "accepted_lines": 249,
+      "overriden_lines": 0
+    }
+  }
+}
