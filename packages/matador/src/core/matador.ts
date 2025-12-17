@@ -18,6 +18,7 @@ import { getQualifiedQueueName } from '../topology/index.js';
 import type { Subscription, Transport } from '../transport/index.js';
 import type {
   AnySubscriber,
+  Dispatcher,
   Event,
   EventClass,
   EventOptions,
@@ -71,7 +72,7 @@ export interface MatadorConfig {
  * - Fanout: Event sending
  * - Shutdown: Graceful termination
  */
-export class Matador {
+export class Matador implements Dispatcher {
   private readonly transport: Transport;
   private readonly topology: Topology;
   private readonly schema;
@@ -114,6 +115,7 @@ export class Matador {
       retryPolicy: this.retryPolicy,
       hooks: this.hooks,
       checkpointStore: config.checkpointStore,
+      dispatcher: this,
     });
 
     // Create fanout engine

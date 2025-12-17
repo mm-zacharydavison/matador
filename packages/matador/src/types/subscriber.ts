@@ -1,7 +1,17 @@
 import type { SubscriberContext } from '../checkpoint/index.js';
 import type { Idempotency, Importance } from './common.js';
+import type { Dispatcher } from './dispatcher.js';
 import type { Envelope } from './envelope.js';
 import type { MatadorEvent } from './event.js';
+
+/**
+ * Context passed to subscriber callbacks.
+ * Provides access to the Matador instance for sending additional events.
+ */
+export interface CallbackContext {
+  /** Matador dispatcher for sending additional events from within a subscriber */
+  readonly matador: Dispatcher;
+}
 
 /**
  * Helper type to get the envelope type for a subscriber callback.
@@ -16,19 +26,28 @@ export type EnvelopeOf<T extends MatadorEvent> = Envelope<T['data']>;
 
 /**
  * Callback function executed when an event is received (standard subscribers).
- * Receives the full envelope containing id, data, and docket.
+ * Receives the full envelope containing id, data, and docket, plus a context
+ * with access to the matador instance for sending additional events.
  */
 export type StandardCallback<T = unknown> = (
   envelope: Envelope<T>,
+  context: CallbackContext,
 ) => Promise<void> | void;
 
 /**
+ * Context for resumable subscriber callbacks.
+ * Combines checkpoint operations (io, all) with matador access.
+ */
+export type ResumableCallbackContext = SubscriberContext & CallbackContext;
+
+/**
  * Callback function for resumable subscribers.
- * Receives the envelope and a SubscriberContext with io() for checkpointed operations.
+ * Receives the envelope and a context with io() for checkpointed operations
+ * and matador for sending additional events.
  */
 export type ResumableCallback<T = unknown> = (
   envelope: Envelope<T>,
-  context: SubscriberContext,
+  context: ResumableCallbackContext,
 ) => Promise<void> | void;
 
 /**

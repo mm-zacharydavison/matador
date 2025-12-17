@@ -7,6 +7,8 @@ export type {
 } from './common.js';
 export { invalidResult, validResult } from './common.js';
 
+export type { Dispatcher } from './dispatcher.js';
+
 export type { CreateEnvelopeOptions, Docket, Envelope } from './envelope.js';
 export { createEnvelope } from './envelope.js';
 
@@ -26,11 +28,13 @@ export { MatadorEvent } from './event.js';
 export type {
   AnySubscriber,
   BaseSubscriberOptions,
+  CallbackContext,
   CreateResumableSubscriberInput,
   CreateStandardSubscriberInput,
   CreateSubscriberInput,
   EnvelopeOf,
   ResumableCallback,
+  ResumableCallbackContext,
   ResumableSubscriber,
   ResumableSubscriberOptions,
   StandardCallback,

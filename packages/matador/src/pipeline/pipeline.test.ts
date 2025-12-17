@@ -10,7 +10,7 @@ import type { RetryDecision, RetryPolicy } from '../retry/index.js';
 import { StandardRetryPolicy } from '../retry/index.js';
 import type { SchemaRegistry } from '../schema/index.js';
 import type { MessageReceipt, Transport } from '../transport/index.js';
-import type { Envelope, SubscriberDefinition } from '../types/index.js';
+import type { Dispatcher, Envelope, SubscriberDefinition } from '../types/index.js';
 import { createEnvelope } from '../types/index.js';
 import type { PipelineConfig } from './pipeline.js';
 import { ProcessingPipeline } from './pipeline.js';
@@ -324,7 +324,13 @@ describe('ProcessingPipeline', () => {
       const result = await pipeline.process(new Uint8Array(), receipt);
 
       expect(result.success).toBe(true);
-      expect(callbackMock).toHaveBeenCalledWith(envelope);
+      expect(callbackMock).toHaveBeenCalledTimes(1);
+      // Callback receives envelope as first argument and context (with matador) as second
+      const calls = callbackMock.mock.calls as unknown as [
+        [Envelope, { matador: Dispatcher }],
+      ];
+      expect(calls[0][0]).toEqual(envelope);
+      expect(calls[0][1]).toHaveProperty('matador');
     });
 
     it('should handle callback throwing error', async () => {
@@ -1189,6 +1195,7 @@ function createMockConfig(
     codec: Partial<Codec>;
     retryPolicy: RetryPolicy | Partial<RetryPolicy>;
     hooks: Partial<SafeHooks>;
+    dispatcher: Partial<Dispatcher>;
   }> = {},
 ): PipelineConfig {
   const defaultTransport: Transport = {
@@ -1272,12 +1279,23 @@ function createMockConfig(
     ...overrides.hooks,
   } as SafeHooks;
 
+  const defaultDispatcher: Dispatcher = {
+    send: mock(async () => ({
+      eventKey: 'test.event',
+      subscribersSent: 0,
+      subscribersSkipped: 0,
+      errors: [],
+    })),
+    ...overrides.dispatcher,
+  } as Dispatcher;
+
   return {
     transport: defaultTransport,
     schema: { ...defaultSchema, ...overrides.schema } as SchemaRegistry,
     codec: defaultCodec,
     retryPolicy: defaultRetryPolicy,
     hooks: defaultHooks,
+    dispatcher: defaultDispatcher,
   };
 }
 

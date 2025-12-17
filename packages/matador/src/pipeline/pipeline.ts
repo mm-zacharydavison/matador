@@ -10,7 +10,13 @@ import type { SafeHooks } from '../hooks/index.js';
 import type { RetryDecision, RetryPolicy } from '../retry/index.js';
 import type { SchemaRegistry } from '../schema/index.js';
 import type { MessageReceipt, Transport } from '../transport/index.js';
-import type { Envelope, SubscriberDefinition } from '../types/index.js';
+import type {
+  CallbackContext,
+  Dispatcher,
+  Envelope,
+  ResumableCallbackContext,
+  SubscriberDefinition,
+} from '../types/index.js';
 import { isResumableSubscriber } from '../types/index.js';
 
 /**
@@ -24,6 +30,8 @@ export interface PipelineConfig {
   readonly hooks: SafeHooks;
   /** Optional checkpoint store for resumable subscribers */
   readonly checkpointStore?: CheckpointStore | undefined;
+  /** Dispatcher (matador) for sending events from subscriber callbacks */
+  readonly dispatcher: Dispatcher;
 }
 
 /**
@@ -54,6 +62,7 @@ export class ProcessingPipeline {
   private readonly retryPolicy: RetryPolicy;
   private readonly hooks: SafeHooks;
   private readonly checkpointStore: CheckpointStore;
+  private readonly dispatcher: Dispatcher;
 
   constructor(config: PipelineConfig) {
     this.transport = config.transport;
@@ -62,6 +71,7 @@ export class ProcessingPipeline {
     this.retryPolicy = config.retryPolicy;
     this.hooks = config.hooks;
     this.checkpointStore = config.checkpointStore ?? new NoOpCheckpointStore();
+    this.dispatcher = config.dispatcher;
   }
 
   /**
@@ -180,24 +190,36 @@ export class ProcessingPipeline {
       });
     }
 
+    // Create base callback context with matador dispatcher
+    const callbackContext: CallbackContext = { matador: this.dispatcher };
+
     await this.hooks.onWorkerWrap(envelope, subscriberDef, async () => {
       await this.hooks.onWorkerBeforeProcess(envelope, subscriberDef);
 
       try {
         if (isResumable && context) {
-          // Resumable subscriber: pass context as second argument
+          // Resumable subscriber: pass combined context (checkpoint + matador)
           // Cast needed because TypeScript can't narrow the union type based on isResumable
           const resumableCallback = subscriber.callback as (
             envelope: Envelope,
-            context: ResumableContext,
+            context: ResumableCallbackContext,
           ) => Promise<void> | void;
-          result = await resumableCallback(envelope, context);
+          // Create combined context by binding class methods and adding matador
+          const fullContext: ResumableCallbackContext = {
+            io: context.io.bind(context),
+            all: context.all.bind(context),
+            attempt: context.attempt,
+            isRetry: context.isRetry,
+            matador: this.dispatcher,
+          };
+          result = await resumableCallback(envelope, fullContext);
         } else {
-          // Standard subscriber: just pass envelope
+          // Standard subscriber: pass envelope and callback context
           const standardCallback = subscriber.callback as (
             envelope: Envelope,
+            context: CallbackContext,
           ) => Promise<void> | void;
-          result = await standardCallback(envelope);
+          result = await standardCallback(envelope, callbackContext);
         }
       } catch (e) {
         error = e instanceof Error ? e : new Error(String(e));
