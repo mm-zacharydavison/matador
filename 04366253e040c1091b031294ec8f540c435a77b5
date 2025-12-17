@@ -1,0 +1,29 @@
+packages/matador/src/core/matador.ts
+  0ac8d259b2d894a5 202-204,206-208,214-218
+packages/matador/src/transport/rabbitmq/rabbitmq-transport.ts
+  0ac8d259b2d894a5 66-76,445-447
+packages/matador/src/transport/rabbitmq/rabbitmq-transport.test.ts
+  0ac8d259b2d894a5 1-118
+.gitignore
+  0ac8d259b2d894a5 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.24",
+  "base_commit_sha": "04366253e040c1091b031294ec8f540c435a77b5",
+  "prompts": {
+    "0ac8d259b2d894a5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9174a926-a31a-4b54-b325-dd397ab53ec0",
+        "model": "unknown"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 179,
+      "total_deletions": 41,
+      "accepted_lines": 146,
+      "overriden_lines": 0
+    }
+  }
+}
