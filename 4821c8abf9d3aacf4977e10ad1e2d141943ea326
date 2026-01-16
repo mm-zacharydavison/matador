@@ -1,0 +1,33 @@
+packages/matador/src/index.ts
+  8fb5e3ac4fccd731 127
+packages/matador-nest/src/discovery/subscriber-discovery.service.ts
+  8fb5e3ac4fccd731 20
+packages/matador-nest/src/types.ts
+  8fb5e3ac4fccd731 8,41-49,51
+packages/matador-nest/test/discovery.test.ts
+  8fb5e3ac4fccd731 251
+tsconfig.json
+  8fb5e3ac4fccd731 22-24
+packages/matador-nest/test/tsconfig.json
+  8fb5e3ac4fccd731 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.34",
+  "base_commit_sha": "4821c8abf9d3aacf4977e10ad1e2d141943ea326",
+  "prompts": {
+    "8fb5e3ac4fccd731": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "97f2f35c-f53c-4ec9-960e-83ac2f5799cb",
+        "model": "claude-opus-4-5-20251101"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 23,
+      "accepted_lines": 37,
+      "overriden_lines": 0
+    }
+  }
+}
