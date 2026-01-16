@@ -63,5 +63,9 @@
     "kafka",
     "transport"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "dist",
+    "cli.ts"
+  ]
 }
