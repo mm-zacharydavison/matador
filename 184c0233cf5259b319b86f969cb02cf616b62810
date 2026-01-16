@@ -1,0 +1,25 @@
+packages/matador/package.json
+  8fb5e3ac4fccd731 66-68,70
+packages/matador-nest/package.json
+  8fb5e3ac4fccd731 67-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.34",
+  "base_commit_sha": "184c0233cf5259b319b86f969cb02cf616b62810",
+  "prompts": {
+    "8fb5e3ac4fccd731": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "97f2f35c-f53c-4ec9-960e-83ac2f5799cb",
+        "model": "claude-opus-4-5-20251101"
+      },
+      "human_author": "Zachary Davison <zachary.davison@meetsmore.com>",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 2,
+      "accepted_lines": 8,
+      "overriden_lines": 1
+    }
+  }
+}
