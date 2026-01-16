@@ -199,6 +199,42 @@ export class MatadorService
   }
 
   /**
+   * Stops receiving new messages without performing full shutdown.
+   * After calling this, no new messages will be delivered from the transport.
+   * The transport remains connected for later shutdown.
+   *
+   * Use this when you need to coordinate shutdown across multiple systems:
+   * 1. Call stopReceiving() to stop new message delivery
+   * 2. Wait for both Matador and your other systems to idle
+   * 3. Let NestJS lifecycle handle disconnect via app.close()
+   *
+   * @returns true if receiving was stopped, false if not started or already stopped
+   *
+   * @example
+   * ```typescript
+   * // In your graceful shutdown handler:
+   * await matadorService.stopReceiving();
+   * await Promise.all([
+   *   matadorService.waitForIdle(30000),
+   *   myOtherService.waitForPendingWork()
+   * ]);
+   * await app.close(); // NestJS lifecycle will disconnect transport
+   * ```
+   */
+  async stopReceiving(): Promise<boolean> {
+    if (!this.isStarted) {
+      return false;
+    }
+
+    this.logger.log('[Matador] ⏳ Stopping message receiving');
+    const result = await this.matador.stopReceiving();
+    if (result) {
+      this.logger.log('[Matador] 🟢 Message receiving stopped');
+    }
+    return result;
+  }
+
+  /**
    * Initializes the Matador instance with discovered schema.
    */
   private initializeMatador(): void {

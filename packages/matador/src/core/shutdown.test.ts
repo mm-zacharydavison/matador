@@ -439,6 +439,125 @@ describe('ShutdownManager', () => {
     });
   });
 
+  describe('publicStopReceiving', () => {
+    beforeEach(() => {
+      manager = new ShutdownManager(
+        getEnqueueCount,
+        stopReceiving,
+        disconnectTransport,
+      );
+    });
+
+    it('should return true when called from running state', async () => {
+      const result = await manager.publicStopReceiving();
+
+      expect(result).toBe(true);
+    });
+
+    it('should transition to receive-stopped state', async () => {
+      await manager.publicStopReceiving();
+
+      expect(manager.state).toBe('receive-stopped');
+    });
+
+    it('should call stopReceiving callback', async () => {
+      await manager.publicStopReceiving();
+
+      expect(stopReceiving).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return false when called after already stopped receiving', async () => {
+      await manager.publicStopReceiving();
+
+      const result = await manager.publicStopReceiving();
+
+      expect(result).toBe(false);
+      expect(stopReceiving).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return false when called after shutdown started', async () => {
+      manager.incrementProcessing();
+      const shutdownPromise = manager.shutdown();
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const result = await manager.publicStopReceiving();
+
+      expect(result).toBe(false);
+
+      manager.decrementProcessing();
+      await shutdownPromise;
+    });
+
+    it('should still allow enqueue after stopReceiving', async () => {
+      await manager.publicStopReceiving();
+
+      expect(manager.isEnqueueAllowed).toBe(true);
+    });
+
+    it('should allow shutdown to complete after publicStopReceiving', async () => {
+      await manager.publicStopReceiving();
+
+      await manager.shutdown();
+
+      expect(manager.state).toBe('stopped');
+      expect(stopReceiving).toHaveBeenCalledTimes(1);
+      expect(disconnectTransport).toHaveBeenCalledTimes(1);
+    });
+
+    it('should skip stopReceiving during shutdown if already called', async () => {
+      await manager.publicStopReceiving();
+
+      expect(stopReceiving).toHaveBeenCalledTimes(1);
+
+      await manager.shutdown();
+
+      expect(stopReceiving).toHaveBeenCalledTimes(1);
+    });
+
+    it('should allow waiting for idle after stopReceiving', async () => {
+      manager.incrementProcessing();
+
+      await manager.publicStopReceiving();
+
+      expect(manager.state).toBe('receive-stopped');
+      expect(manager.getHandlersState().isIdle).toBe(false);
+
+      manager.decrementProcessing();
+
+      expect(manager.getHandlersState().isIdle).toBe(true);
+    });
+
+    it('should transition through correct states when shutdown follows publicStopReceiving', async () => {
+      const states: ShutdownState[] = [];
+
+      disconnectTransport = mock(async () => {
+        states.push(manager.state);
+      });
+
+      manager = new ShutdownManager(
+        getEnqueueCount,
+        stopReceiving,
+        disconnectTransport,
+      );
+
+      states.push(manager.state);
+
+      await manager.publicStopReceiving();
+      states.push(manager.state);
+
+      await manager.shutdown();
+      states.push(manager.state);
+
+      expect(states).toEqual([
+        'running',
+        'receive-stopped',
+        'disconnecting',
+        'stopped',
+      ]);
+    });
+  });
+
   describe('forceStop', () => {
     beforeEach(() => {
       manager = new ShutdownManager(

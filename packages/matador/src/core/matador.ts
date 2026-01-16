@@ -131,7 +131,7 @@ export class Matador implements Dispatcher {
     // Create shutdown manager
     this.shutdownManager = new ShutdownManager(
       () => this.fanout.eventsBeingEnqueuedCount,
-      () => this.stopReceiving(),
+      () => this.unsubscribeAll(),
       () => this.transport.disconnect(),
       config.shutdownConfig,
     );
@@ -330,6 +330,26 @@ export class Matador implements Dispatcher {
   }
 
   /**
+   * Stops receiving new messages without performing full shutdown.
+   * After calling this, no new messages will be delivered from RabbitMQ.
+   * The transport remains connected for later shutdown.
+   *
+   * Use this when you need to coordinate shutdown across multiple systems:
+   * 1. Call stopReceiving() to stop new message delivery
+   * 2. Wait for both Matador and your other systems to idle
+   * 3. Call shutdown() to disconnect (or let NestJS lifecycle handle it)
+   *
+   * @returns true if receiving was stopped, false if not started or already stopped
+   */
+  async stopReceiving(): Promise<boolean> {
+    if (!this.started) {
+      return false;
+    }
+
+    return this.shutdownManager.publicStopReceiving();
+  }
+
+  /**
    * Gracefully shuts down Matador.
    */
   async shutdown(): Promise<void> {
@@ -348,7 +368,7 @@ export class Matador implements Dispatcher {
     return this.transport.isConnected();
   }
 
-  private async stopReceiving(): Promise<void> {
+  private async unsubscribeAll(): Promise<void> {
     for (const subscription of this.subscriptions) {
       await subscription.unsubscribe();
     }

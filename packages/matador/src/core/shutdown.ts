@@ -5,6 +5,7 @@ import { type Logger, consoleLogger } from '../hooks/index.js';
  */
 export type ShutdownState =
   | 'running'
+  | 'receive-stopped'
   | 'stopping-receive'
   | 'waiting-handlers'
   | 'stopping-enqueue'
@@ -108,16 +109,40 @@ export class ShutdownManager {
   }
 
   /**
+   * Stops receiving new messages without performing full shutdown.
+   * After calling this, no new messages will be delivered from the transport.
+   * The transport remains connected for later shutdown.
+   *
+   * Use this when you need to stop receiving before waiting for idle,
+   * for example to coordinate waiting across multiple systems.
+   *
+   * @returns true if receiving was stopped, false if already stopped or shutting down
+   */
+  async publicStopReceiving(): Promise<boolean> {
+    if (this._state !== 'running') {
+      return false;
+    }
+
+    this._state = 'stopping-receive';
+    await this.stopReceiving();
+    this._state = 'receive-stopped';
+    return true;
+  }
+
+  /**
    * Performs graceful shutdown.
    */
   async shutdown(): Promise<void> {
-    if (this._state !== 'running') {
+    // Allow shutdown from either 'running' or 'receive-stopped' states
+    if (this._state !== 'running' && this._state !== 'receive-stopped') {
       return;
     }
 
-    // 1. Stop receiving new messages
-    this._state = 'stopping-receive';
-    await this.stopReceiving();
+    // 1. Stop receiving new messages (skip if already stopped)
+    if (this._state === 'running') {
+      this._state = 'stopping-receive';
+      await this.stopReceiving();
+    }
 
     // 2. Wait for handlers to idle
     this._state = 'waiting-handlers';

@@ -466,6 +466,140 @@ describe('Matador', () => {
     });
   });
 
+  describe('stopReceiving', () => {
+    it('should return false when not started', async () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
+
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
+
+      const result = await matador.stopReceiving();
+
+      expect(result).toBe(false);
+    });
+
+    it('should return true when started and stop receiving messages', async () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
+
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
+
+      await matador.start();
+
+      const result = await matador.stopReceiving();
+
+      expect(result).toBe(true);
+      expect(matador.isConnected()).toBe(true);
+    });
+
+    it('should return false when called twice', async () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
+
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
+
+      await matador.start();
+
+      const result1 = await matador.stopReceiving();
+      const result2 = await matador.stopReceiving();
+
+      expect(result1).toBe(true);
+      expect(result2).toBe(false);
+    });
+
+    it('should allow shutdown after stopReceiving', async () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
+
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
+
+      await matador.start();
+      await matador.stopReceiving();
+      await matador.shutdown();
+
+      expect(matador.isConnected()).toBe(false);
+    });
+
+    it('should allow sending events after stopReceiving but before shutdown', async () => {
+      const topology = TopologyBuilder.create()
+        .withNamespace('test')
+        .addQueue('events')
+        .build();
+
+      const subscriber = createSubscriber({
+        name: 'handle-user',
+        description: 'Handles user events',
+        callback: async () => {},
+      });
+
+      const schema: MatadorSchema = {
+        [UserCreatedEvent.key]: [UserCreatedEvent, [subscriber]],
+      };
+
+      matador = new Matador({ transport, topology, schema });
+
+      await matador.start();
+      await matador.stopReceiving();
+
+      const event = new UserCreatedEvent({
+        userId: '123',
+        email: 'test@example.com',
+      });
+
+      const result = await matador.send(event);
+
+      expect(result.subscribersSent).toBe(1);
+    });
+  });
+
   describe('idle state', () => {
     it('should report idle when no processing', async () => {
       const topology = TopologyBuilder.create()
