@@ -124,6 +124,7 @@ export { CodecDecodeError, JsonCodec, RabbitMQCodec } from './codec/index.js';
 export type {
   MatadorSchema,
   RegisterOptions,
+  RuntimeSchemaEntryTuple,
   SchemaEntry,
   SchemaEntryTuple,
   SchemaIssue,

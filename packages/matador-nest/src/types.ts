@@ -1,11 +1,11 @@
 import type { ModuleMetadata, Type } from '@nestjs/common';
 import type {
-  AnySubscriber,
   BaseSubscriberOptions,
   EventClass,
   Idempotency,
   MatadorConfig,
   MatadorHooks,
+  RuntimeSchemaEntryTuple,
 } from '@zdavison/matador';
 
 /**
@@ -38,11 +38,17 @@ export interface NestMatadorOptions {
 
   /**
    * Additional events to register (for events without decorated subscribers).
-   * Maps event class to subscriber stubs or external subscribers.
+   * Array of [EventClass, Subscriber[]] tuples.
+   *
+   * @example
+   * ```typescript
+   * additionalEvents: [
+   *   [UserInsertedEvent, [userInsertedSubscriber]],
+   *   [UserUpdatedEvent, [userUpdatedSubscriber]],
+   * ]
+   * ```
    */
-  readonly additionalEvents?:
-    | Map<EventClass<unknown>, AnySubscriber[]>
-    | undefined;
+  readonly additionalEvents?: readonly RuntimeSchemaEntryTuple[] | undefined;
 
   /**
    * Whether to auto-start consuming.

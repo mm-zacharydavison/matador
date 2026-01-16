@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import 'reflect-metadata';
 import type { DiscoveryService } from '@nestjs/core';
-import {
-  type AnySubscriber,
-  type Envelope,
-  type EventClass,
-  MatadorEvent,
-} from '@zdavison/matador';
+import { type Envelope, MatadorEvent } from '@zdavison/matador';
 import { OnMatadorEvent } from '../src/decorators/on-matador-event.decorator.js';
 import { SubscriberDiscoveryService } from '../src/discovery/subscriber-discovery.service.js';
 
@@ -250,15 +245,10 @@ describe('SubscriberDiscoveryService', () => {
       idempotent: 'unknown' as const,
     };
 
-    const additionalEvents = new Map<EventClass<unknown>, AnySubscriber[]>();
-    additionalEvents.set(OrderPlacedEvent as EventClass<unknown>, [
-      additionalSubscriber,
-    ]);
-
     const mergedSchema = discoveryService.getMergedSchema({
       transport: {} as never,
       topology: {} as never,
-      additionalEvents,
+      additionalEvents: [[OrderPlacedEvent, [additionalSubscriber]]],
     });
 
     expect(mergedSchema[UserCreatedEvent.key]).toBeDefined();

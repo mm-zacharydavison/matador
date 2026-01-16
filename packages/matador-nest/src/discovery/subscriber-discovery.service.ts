@@ -17,7 +17,7 @@ import type {
 /**
  * Schema entry tuple type for building the schema.
  */
-type SchemaEntryTuple = [EventClass<unknown>, AnySubscriber[]];
+type SchemaEntryTuple = [EventClass<unknown>, readonly AnySubscriber[]];
 
 /**
  * Mutable schema type for building during discovery.

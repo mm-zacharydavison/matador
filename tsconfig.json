@@ -19,7 +19,9 @@
     "noUncheckedIndexedAccess": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "references": [
     { "path": "./packages/matador" },
