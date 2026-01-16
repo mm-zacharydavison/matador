@@ -266,17 +266,6 @@ export class MatadorService
     this.isShuttingDown = true;
     this.logger.log('[Matador] ⏳ Graceful shutdown initiated, draining in-flight messages');
 
-    // Wait for in-flight messages to complete (with configurable timeout)
-    const timeoutMs =
-      this.options.shutdownConfig?.gracefulShutdownTimeout ?? 30000;
-    const drained = await this.matador.waitForIdle(timeoutMs);
-
-    if (!drained) {
-      this.logger.warn(
-        `[Matador] 🟡 Shutdown timeout reached after ${timeoutMs}ms, some messages may not have completed`,
-      );
-    }
-
     await this.matador.shutdown();
     this.logger.log('[Matador] 🟢 Shutdown complete');
   }
