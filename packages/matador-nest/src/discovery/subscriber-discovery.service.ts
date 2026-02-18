@@ -1,5 +1,5 @@
-import { Injectable, type OnModuleInit } from '@nestjs/common';
-import type { DiscoveryService } from '@nestjs/core';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
+import { DiscoveryService } from '@nestjs/core';
 import {
   type AnySubscriber,
   type Envelope,
@@ -33,7 +33,10 @@ export class SubscriberDiscoveryService implements OnModuleInit {
   private schema: MutableSchema = {};
   private discovered = false;
 
-  constructor(private readonly discoveryService: DiscoveryService) {}
+  constructor(
+    @Inject(DiscoveryService)
+    private readonly discoveryService: DiscoveryService,
+  ) {}
 
   onModuleInit(): void {
     this.discoverSubscribers();

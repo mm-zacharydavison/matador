@@ -18,7 +18,7 @@ import {
   isSchemaEntryTuple,
 } from '@zdavison/matador';
 import { MATADOR_OPTIONS } from '../constants.js';
-import type { SubscriberDiscoveryService } from '../discovery/subscriber-discovery.service.js';
+import { SubscriberDiscoveryService } from '../discovery/subscriber-discovery.service.js';
 import type { MatadorModuleOptions } from '../types.js';
 
 /**
