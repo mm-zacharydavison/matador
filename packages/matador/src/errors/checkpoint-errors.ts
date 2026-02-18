@@ -17,8 +17,7 @@ export class DuplicateIoKeyError extends MatadorError {
     public readonly subscriberName: string,
   ) {
     super(
-      `Duplicate io key "${key}" in subscriber "${subscriberName}". ` +
-        `Each io() call must have a unique key.`,
+      `Duplicate io key "${key}" in subscriber "${subscriberName}". Each io() call must have a unique key.`,
     );
   }
 }

@@ -437,7 +437,7 @@ describe.each(transportFactories)(
           const mainSub = await transport.subscribe(
             queueName,
             async (_env, receipt) => {
-              await transport.sendToDeadLetter!(
+              await transport.sendToDeadLetter?.(
                 receipt,
                 'undeliverable',
                 envelope,

@@ -35,7 +35,7 @@ export type EnvelopeOf<T extends MatadorEvent> = Envelope<T['data']>;
 export type StandardCallback<T = unknown> = (
   envelope: Envelope<T>,
   context: CallbackContext,
-) => Promise<unknown> | unknown | void;
+) => Promise<unknown> | unknown | undefined;
 
 /**
  * Context for resumable subscriber callbacks.
@@ -54,7 +54,7 @@ export type ResumableCallbackContext = SubscriberContext & CallbackContext;
 export type ResumableCallback<T = unknown> = (
   envelope: Envelope<T>,
   context: ResumableCallbackContext,
-) => Promise<unknown> | unknown | void;
+) => Promise<unknown> | unknown | undefined;
 
 /**
  * Callback function executed when an event is received.

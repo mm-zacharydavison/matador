@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 import { createEnvelope } from '../types/envelope.js';
 import {
-  assertEvent,
-  DontRetry,
   DoRetry,
+  DontRetry,
   EventAssertionError,
+  assertEvent,
   isAssertionError,
-  isDontRetry,
   isDoRetry,
+  isDontRetry,
 } from './retry-errors.js';
 
 function createTestEnvelope(data: unknown = { foo: 'bar' }) {
@@ -142,7 +142,9 @@ describe('retry-errors', () => {
         expect.unreachable('should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(EventAssertionError);
-        expect((error as EventAssertionError).message).toBe('userId is required');
+        expect((error as EventAssertionError).message).toBe(
+          'userId is required',
+        );
       }
     });
   });

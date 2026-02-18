@@ -98,8 +98,7 @@ export class TransportNotConnectedError extends MatadorError {
     operation = 'operation',
   ) {
     super(
-      `Cannot perform ${operation}: Transport "${transportName}" is not connected. ` +
-        `Ensure connect() was called and the broker is accessible.`,
+      `Cannot perform ${operation}: Transport "${transportName}" is not connected. Ensure connect() was called and the broker is accessible.`,
     );
   }
 }
@@ -187,8 +186,8 @@ export class DelayedMessagesNotSupportedError extends MatadorError {
 
   constructor(public readonly transportName: string) {
     super(
-      `Delayed messages require the RabbitMQ delayed message exchange plugin. ` +
-        `Install rabbitmq_delayed_message_exchange or remove delayMs from event options.`,
+      'Delayed messages require the RabbitMQ delayed message exchange plugin. ' +
+        'Install rabbitmq_delayed_message_exchange or remove delayMs from event options.',
     );
   }
 }
@@ -209,8 +208,7 @@ export class EventNotRegisteredError extends MatadorError {
 
   constructor(public readonly eventKey: string) {
     super(
-      `Event "${eventKey}" is not registered in schema. ` +
-        `Register it using matador.register(EventClass, subscribers).`,
+      `Event "${eventKey}" is not registered in schema. Register it using matador.register(EventClass, subscribers).`,
     );
   }
 }
@@ -232,9 +230,7 @@ export class SubscriberNotRegisteredError extends MatadorError {
     public readonly eventKey?: string,
   ) {
     super(
-      `Subscriber "${subscriberName}" is not registered` +
-        (eventKey ? ` for event "${eventKey}"` : '') +
-        '. Check schema registration.',
+      `Subscriber "${subscriberName}" is not registered${eventKey ? ` for event "${eventKey}"` : ''}. Check schema registration.`,
     );
   }
 }
@@ -251,8 +247,7 @@ export class NoSubscribersExistError extends MatadorError {
 
   constructor(public readonly eventKey: string) {
     super(
-      `No subscribers registered for event "${eventKey}". ` +
-        `Add subscribers using matador.register(EventClass, [subscriber1, subscriber2]).`,
+      `No subscribers registered for event "${eventKey}". Add subscribers using matador.register(EventClass, [subscriber1, subscriber2]).`,
     );
   }
 }
@@ -273,7 +268,7 @@ export class InvalidSchemaError extends MatadorError {
     message: string,
     public readonly cause?: string,
   ) {
-    super(`Invalid schema: ${message}` + (cause ? `. Cause: ${cause}` : ''));
+    super(`Invalid schema: ${message}${cause ? `. Cause: ${cause}` : ''}`);
   }
 }
 
@@ -290,8 +285,7 @@ export class SubscriberIsStubError extends MatadorError {
 
   constructor(public readonly subscriberName: string) {
     super(
-      `Subscriber "${subscriberName}" is a stub and cannot be processed locally. ` +
-        `Replace with a full Subscriber implementation in the consumer schema.`,
+      `Subscriber "${subscriberName}" is a stub and cannot be processed locally. Replace with a full Subscriber implementation in the consumer schema.`,
     );
   }
 }
@@ -308,8 +302,7 @@ export class LocalTransportCannotProcessStubError extends MatadorError {
 
   constructor(public readonly subscriberName: string) {
     super(
-      `LocalTransport cannot process stub subscriber "${subscriberName}". ` +
-        `Stub subscribers require a distributed transport like RabbitMQ.`,
+      `LocalTransport cannot process stub subscriber "${subscriberName}". Stub subscribers require a distributed transport like RabbitMQ.`,
     );
   }
 }
@@ -330,8 +323,7 @@ export class QueueNotFoundError extends MatadorError {
 
   constructor(public readonly queueName: string) {
     super(
-      `Queue "${queueName}" not found. ` +
-        `Ensure it is defined in topology and applyTopology() was called.`,
+      `Queue "${queueName}" not found. Ensure it is defined in topology and applyTopology() was called.`,
     );
   }
 }
@@ -355,7 +347,7 @@ export class InvalidEventError extends MatadorError {
     message: string,
     public readonly cause?: string,
   ) {
-    super(`Invalid event: ${message}` + (cause ? `. Cause: ${cause}` : ''));
+    super(`Invalid event: ${message}${cause ? `. Cause: ${cause}` : ''}`);
   }
 }
 
@@ -382,8 +374,7 @@ export class MessageMaybePoisonedError extends MatadorError {
     public readonly maxDeliveries: number,
   ) {
     super(
-      `Message "${eventId}" delivered ${deliveryCount} times (max: ${maxDeliveries}). ` +
-        `Possible poison message - will not be retried.`,
+      `Message "${eventId}" delivered ${deliveryCount} times (max: ${maxDeliveries}). Possible poison message - will not be retried.`,
     );
   }
 }
@@ -405,8 +396,7 @@ export class IdempotentMessageCannotRetryError extends MatadorError {
     public readonly subscriberName: string,
   ) {
     super(
-      `Non-idempotent subscriber "${subscriberName}" cannot retry redelivered message "${eventId}". ` +
-        `Mark subscriber as idempotent='yes' or implement idempotency handling.`,
+      `Non-idempotent subscriber "${subscriberName}" cannot retry redelivered message "${eventId}". Mark subscriber as idempotent='yes' or implement idempotency handling.`,
     );
   }
 }

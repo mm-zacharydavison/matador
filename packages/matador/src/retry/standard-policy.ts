@@ -149,8 +149,7 @@ export class StandardRetryPolicy implements RetryPolicy {
   getDelay(context: RetryContext): number {
     const attempt = context.receipt.attemptNumber;
     const delay =
-      this.config.baseDelay *
-      Math.pow(this.config.backoffMultiplier, attempt - 1);
+      this.config.baseDelay * this.config.backoffMultiplier ** (attempt - 1);
     return Math.min(delay, this.config.maxDelay);
   }
 }

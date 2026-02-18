@@ -14,7 +14,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run lint
-      - run: bun run type-check
+      - run: bun run typecheck
 
   test:
     runs-on: ubuntu-latest
@@ -22,10 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bun run test:coverage
-      - uses: codecov/codecov-action@v4
-        with:
-          files: ./coverage/lcov.info
+      - run: bun run test
 
   integration:
     runs-on: ubuntu-latest
@@ -44,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bun run test:integration
+      - run: bun run --filter '@zdavison/matador' test:integration
         env:
           RABBITMQ_URI: amqp://localhost:5672
 
@@ -56,7 +53,3 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/

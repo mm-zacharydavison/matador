@@ -152,8 +152,8 @@ export class RabbitMQCodec implements HeaderAwareCodec {
     if (typeof value !== 'object' || value === null) return false;
     const obj = value as Record<string, unknown>;
     return (
-      typeof obj['key'] === 'string' &&
-      typeof obj['targetSubscriber'] === 'string' &&
+      typeof obj.key === 'string' &&
+      typeof obj.targetSubscriber === 'string' &&
       'data' in obj &&
       !('payload' in obj)
     );
@@ -163,7 +163,7 @@ export class RabbitMQCodec implements HeaderAwareCodec {
     if (typeof value !== 'object' || value === null) return false;
     const obj = value as Record<string, unknown>;
     return (
-      typeof obj['id'] === 'string' && 'data' in obj && !('key' in obj) // Distinguish from v1 which also has 'data'
+      typeof obj.id === 'string' && 'data' in obj && !('key' in obj) // Distinguish from v1 which also has 'data'
     );
   }
 
@@ -232,7 +232,7 @@ export class RabbitMQCodec implements HeaderAwareCodec {
       Object.assign(mergedMetadata, body.metadata);
     }
     if (user_id !== undefined && user_id !== null) {
-      mergedMetadata['user_id'] = user_id;
+      mergedMetadata.user_id = user_id;
     }
     Object.assign(mergedMetadata, otherUniversal);
 

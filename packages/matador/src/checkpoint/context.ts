@@ -117,9 +117,11 @@ export class ResumableContext implements SubscriberContext {
   >(
     ops: T,
   ): Promise<{
-    [K in keyof T]: T[K] extends [string, () => Promise<infer R> | infer R]
+    [K in keyof T]: T[K] extends [string, () => Promise<infer R>]
       ? R
-      : never;
+      : T[K] extends [string, () => infer R]
+        ? R
+        : never;
   }> {
     // First, check for duplicates within this all() call
     const keysInThisCall = new Set<string>();
@@ -182,9 +184,11 @@ export class ResumableContext implements SubscriberContext {
     await this.store.set(this.envelope.id, this.checkpoint);
 
     return results as {
-      [K in keyof T]: T[K] extends [string, () => Promise<infer R> | infer R]
+      [K in keyof T]: T[K] extends [string, () => Promise<infer R>]
         ? R
-        : never;
+        : T[K] extends [string, () => infer R]
+          ? R
+          : never;
     };
   }
 

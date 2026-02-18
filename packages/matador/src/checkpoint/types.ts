@@ -97,9 +97,11 @@ export interface SubscriberContext {
   >(
     ops: T,
   ): Promise<{
-    [K in keyof T]: T[K] extends [string, () => Promise<infer R> | infer R]
+    [K in keyof T]: T[K] extends [string, () => Promise<infer R>]
       ? R
-      : never;
+      : T[K] extends [string, () => infer R]
+        ? R
+        : never;
   }>;
 
   /** Current attempt number (1-based) */

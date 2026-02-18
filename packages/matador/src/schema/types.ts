@@ -62,9 +62,9 @@ export function bind<T extends MatadorEvent>(
  * Only requires the static `key` property for routing.
  * Constructor constraint is omitted to allow heterogeneous event types.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Constructor accepts any data type for variance compatibility
 export type AnyEventClass = {
   readonly key: string;
+  // biome-ignore lint/suspicious/noExplicitAny: Required for variance compatibility in heterogeneous collections
   new (data: any): MatadorEvent;
 };
 

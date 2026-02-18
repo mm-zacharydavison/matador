@@ -293,8 +293,8 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event);
 
       const calls = (transport.send as ReturnType<typeof mock>).mock.calls;
-      const envelope1 = calls[0]![1] as Envelope;
-      const envelope2 = calls[1]![1] as Envelope;
+      const envelope1 = calls[0]?.[1] as Envelope;
+      const envelope2 = calls[1]?.[1] as Envelope;
 
       expect(envelope1.id).not.toBe(envelope2.id);
       expect(envelope1.docket.targetSubscriber).toBe('subscriber-1');
@@ -326,8 +326,8 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event);
 
       const calls = (transport.send as ReturnType<typeof mock>).mock.calls;
-      expect(calls[0]![0]).toBe('test.queue-1');
-      expect(calls[1]![0]).toBe('test.queue-2');
+      expect(calls[0]?.[0]).toBe('test.queue-1');
+      expect(calls[1]?.[0]).toBe('test.queue-2');
     });
 
     it('should send to no subscribers when event is not registered', async () => {
@@ -363,7 +363,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEventWithMetadata, event);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.metadata).toEqual({ source: 'api', version: 1 });
     });
 
@@ -388,7 +388,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event, options);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.metadata).toEqual({ requestId: 'req-123' });
     });
 
@@ -413,7 +413,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEventWithMetadata, event, options);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.metadata).toEqual({
         source: 'api',
         version: 2,
@@ -454,7 +454,7 @@ describe('FanoutEngine', () => {
       await fanoutWithHooks.send(UserCreatedEvent, event);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.metadata).toEqual({
         environment: 'test',
         hostname: 'test-host',
@@ -478,7 +478,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.metadata).toEqual({});
     });
   });
@@ -686,9 +686,9 @@ describe('FanoutEngine', () => {
       expect(result.subscribersSent).toBe(0);
       expect(result.subscribersSkipped).toBe(0);
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]!.subscriberName).toBe('handle-user');
-      expect(result.errors[0]!.queue).toBe('test.events');
-      expect(result.errors[0]!.error).toBeInstanceOf(TransportSendError);
+      expect(result.errors[0]?.subscriberName).toBe('handle-user');
+      expect(result.errors[0]?.queue).toBe('test.events');
+      expect(result.errors[0]?.error).toBeInstanceOf(TransportSendError);
     });
 
     it('should continue sending to other subscribers after one fails', async () => {
@@ -738,7 +738,7 @@ describe('FanoutEngine', () => {
       expect(result.subscribersSent).toBe(1);
       expect(result.subscribersSkipped).toBe(0);
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]!.subscriberName).toBe('subscriber-1');
+      expect(result.errors[0]?.subscriberName).toBe('subscriber-1');
     });
 
     it('should wrap non-Error throws as Error in TransportSendError', async () => {
@@ -776,8 +776,8 @@ describe('FanoutEngine', () => {
       );
 
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]!.error).toBeInstanceOf(TransportSendError);
-      expect(result.errors[0]!.error.message).toContain('test.events');
+      expect(result.errors[0]?.error).toBeInstanceOf(TransportSendError);
+      expect(result.errors[0]?.error.message).toContain('test.events');
     });
   });
 
@@ -948,7 +948,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event, options);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.correlationId).toBe('corr-123');
     });
 
@@ -978,8 +978,8 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event, options);
 
       const calls = (transport.send as ReturnType<typeof mock>).mock.calls;
-      const envelope1 = calls[0]![1] as Envelope;
-      const envelope2 = calls[1]![1] as Envelope;
+      const envelope1 = calls[0]?.[1] as Envelope;
+      const envelope2 = calls[1]?.[1] as Envelope;
 
       expect(envelope1.docket.correlationId).toBe('corr-456');
       expect(envelope2.docket.correlationId).toBe('corr-456');
@@ -1002,7 +1002,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.correlationId).toBeUndefined();
     });
   });
@@ -1269,7 +1269,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event, options);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.scheduledFor).toBeDefined();
       if (envelope.docket.scheduledFor) {
         const scheduledTime = new Date(envelope.docket.scheduledFor).getTime();
@@ -1322,7 +1322,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.importance).toBe('must-investigate');
     });
 
@@ -1343,7 +1343,7 @@ describe('FanoutEngine', () => {
       await fanout.send(UserCreatedEvent, event);
 
       const envelope = (transport.send as ReturnType<typeof mock>).mock
-        .calls[0]![1] as Envelope;
+        .calls[0]?.[1] as Envelope;
       expect(envelope.docket.importance).toBe('should-investigate');
     });
   });

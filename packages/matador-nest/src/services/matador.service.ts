@@ -18,7 +18,7 @@ import {
   isSchemaEntryTuple,
 } from '@zdavison/matador';
 import { MATADOR_OPTIONS } from '../constants.js';
-import { SubscriberDiscoveryService } from '../discovery/subscriber-discovery.service.js';
+import type { SubscriberDiscoveryService } from '../discovery/subscriber-discovery.service.js';
 import type { MatadorModuleOptions } from '../types.js';
 
 /**
@@ -300,7 +300,9 @@ export class MatadorService
     }
 
     this.isShuttingDown = true;
-    this.logger.log('[Matador] ⏳ Graceful shutdown initiated, draining in-flight messages');
+    this.logger.log(
+      '[Matador] ⏳ Graceful shutdown initiated, draining in-flight messages',
+    );
 
     await this.matador.shutdown();
     this.logger.log('[Matador] 🟢 Shutdown complete');

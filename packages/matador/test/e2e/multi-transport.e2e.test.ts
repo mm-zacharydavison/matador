@@ -137,9 +137,9 @@ describe.skipIf(SKIP_E2E)('MultiTransport E2E', () => {
 
       // Verify fallback was triggered
       expect(fallbackEvents).toHaveLength(1);
-      expect(fallbackEvents[0]!.failedTransport).toBe('rabbitmq');
-      expect(fallbackEvents[0]!.nextTransport).toBe('local');
-      expect(fallbackEvents[0]!.queue).toBe(queueName);
+      expect(fallbackEvents[0]?.failedTransport).toBe('rabbitmq');
+      expect(fallbackEvents[0]?.nextTransport).toBe('local');
+      expect(fallbackEvents[0]?.queue).toBe(queueName);
     });
 
     it('should process multiple messages via fallback', async () => {
@@ -214,7 +214,7 @@ describe.skipIf(SKIP_E2E)('MultiTransport E2E', () => {
       expect(receivedMessages).toContain('rabbit-msg');
       expect(receivedMessages).toContain('memory-msg');
       expect(fallbackEvents).toHaveLength(1);
-      expect(fallbackEvents[0]!.envelope.id).toBe('memory-msg');
+      expect(fallbackEvents[0]?.envelope.id).toBe('memory-msg');
     });
   });
 });

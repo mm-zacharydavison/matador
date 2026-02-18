@@ -150,7 +150,7 @@ export class ConnectionManager {
   calculateDelay(attempt: number): number {
     const delay =
       this.config.initialReconnectDelay *
-      Math.pow(this.config.backoffMultiplier, attempt - 1);
+      this.config.backoffMultiplier ** (attempt - 1);
     return Math.min(delay, this.config.maxReconnectDelay);
   }
 

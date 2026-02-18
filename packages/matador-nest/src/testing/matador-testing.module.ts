@@ -45,6 +45,7 @@ import type { MatadorModuleOptions } from '../types.js';
  * ```
  */
 @Module({})
+// biome-ignore lint/complexity/noStaticOnlyClass: NestJS modules require class-based pattern with static factory methods
 export class MatadorTestingModule {
   /**
    * Creates a testing module with LocalTransport and default configuration.

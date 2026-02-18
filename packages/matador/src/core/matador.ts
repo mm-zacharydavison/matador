@@ -290,13 +290,12 @@ export class Matador implements Dispatcher {
       const options = maybeOptions;
       const event = new eventClass(data);
       return this.fanout.send(eventClass, event, options);
-    } else {
-      // Called as: send(event, options?)
-      const event = eventOrClass as Event<T>;
-      const options = dataOrOptions as EventOptions | undefined;
-      const eventClass = event.constructor as EventClass<T>;
-      return this.fanout.send(eventClass, event, options);
     }
+    // Called as: send(event, options?)
+    const event = eventOrClass as Event<T>;
+    const options = dataOrOptions as EventOptions | undefined;
+    const eventClass = event.constructor as EventClass<T>;
+    return this.fanout.send(eventClass, event, options);
   }
 
   /**

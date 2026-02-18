@@ -68,6 +68,7 @@ import type {
  */
 @Global()
 @Module({})
+// biome-ignore lint/complexity/noStaticOnlyClass: NestJS modules require class-based pattern with static factory methods
 export class MatadorModule {
   /**
    * Configures the MatadorModule with static options.
@@ -100,7 +101,7 @@ export class MatadorModule {
    * @returns Dynamic module configuration
    */
   static forRootAsync(options: MatadorModuleAsyncOptions): DynamicModule {
-    const asyncProviders = this.createAsyncProviders(options);
+    const asyncProviders = MatadorModule.createAsyncProviders(options);
 
     return {
       module: MatadorModule,

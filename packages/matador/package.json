@@ -64,8 +64,5 @@
     "transport"
   ],
   "license": "MIT",
-  "files": [
-    "dist",
-    "cli.ts"
-  ]
+  "files": ["dist", "cli.ts"]
 }
