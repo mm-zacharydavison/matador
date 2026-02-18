@@ -25,7 +25,7 @@
     "build": "rm -rf dist *.tsbuildinfo && tsup && tsc --build && cp dist/index.d.ts dist/index.d.cts",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "test:integration": "bun test --grep integration",
+    "test:integration": "bun test test/integration/ test/e2e/",
     "lint": "bunx biome check .",
     "lint:fix": "bunx biome check . --fix",
     "typecheck": "tsc --noEmit",
